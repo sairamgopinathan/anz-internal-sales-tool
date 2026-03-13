@@ -688,13 +688,15 @@ async function deleteCollateral(id: string | number) {
 
               <p className="mt-2 text-[12px] text-muted"><span className="font-semibold text-foreground">Recommended when:</span> {record.recommendedWhen}</p>
 
-              <div className="mt-3 flex flex-wrap gap-1.5 text-[12px] text-muted">
-                {[...record.tags, ...record.stages, ...record.situations, ...record.competitors, ...record.segments, ...record.industries].map((tag) => (
-                  <span key={`${record.id}-${tag}`} className="rounded-full border border-border/60 bg-surface-contrast px-2 py-0.5 text-foreground/85">
-                    {tag}
-                  </span>
-                ))}
-              </div>
+              {record.tags.length ? (
+                <div className="mt-3 flex flex-wrap gap-1.5 text-[12px] text-muted">
+                  {record.tags.map((tag) => (
+                    <span key={`${record.id}-${tag}`} className="rounded-full border border-border/60 bg-surface-contrast px-2 py-0.5 text-foreground/85">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
 
               <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
                 <div className="flex flex-wrap items-center gap-2">
