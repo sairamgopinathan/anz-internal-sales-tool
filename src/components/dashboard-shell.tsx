@@ -24,6 +24,7 @@ const THEME_STORAGE_KEY = "anzapp-theme";
 const ADMIN_PASSWORD = "admin123";
 const ADMIN_ACCESS_STORAGE_KEY = "anzapp-admin-access";
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+const ADMIN_PAGE_SIZE = 10;
 
 function applyTheme(theme: Theme) {
   document.documentElement.dataset.theme = theme;
@@ -64,6 +65,15 @@ function TrashIcon() {
   );
 }
 
+function SearchIcon() {
+  return (
+    <svg aria-hidden="true" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-4.35-4.35" />
+      <circle cx="11" cy="11" r="6.5" />
+    </svg>
+  );
+}
+
 function ThemeIcon({ theme }: { theme: Theme }) {
   if (theme === "dark") {
     return (
@@ -81,36 +91,38 @@ function ThemeIcon({ theme }: { theme: Theme }) {
   );
 }
 
-function MultiFilter({
+function GuidedFilter({
   label,
   value,
   options,
   onChange,
+  placeholder,
   optional,
 }: {
   label: string;
   value: string;
   options: string[];
   onChange: (value: string) => void;
+  placeholder: string;
   optional?: boolean;
 }) {
   return (
     <label className="block text-sm font-medium text-foreground">
-      {label}
-      <div className="relative mt-2">
+      <span className="mb-2 block text-sm font-semibold text-foreground">{label}</span>
+      <div className="relative">
         <select
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          className="app-select w-full rounded-2xl border border-border px-4 py-3 pr-10 text-foreground outline-none transition focus:border-accent"
+          className="app-select w-full rounded-xl border border-border bg-surface-soft px-3.5 py-3 pr-10 text-sm text-foreground outline-none transition focus:border-accent"
         >
-          <option value="">{optional ? `Any ${label.toLowerCase()}` : `Select ${label.toLowerCase()}`}</option>
+          <option value="">{optional ? `Any ${placeholder.toLowerCase()}` : placeholder}</option>
           {options.map((option) => (
             <option key={option} value={option}>
               {option}
             </option>
           ))}
         </select>
-        <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-muted">
+        <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-muted">
           <svg aria-hidden="true" className="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8">
             <path strokeLinecap="round" strokeLinejoin="round" d="m6 8 4 4 4-4" />
           </svg>
@@ -158,12 +170,16 @@ function validateForm(values: CollateralFormValues): CollateralFormErrors {
 }
 
 function TagGroup({ label, tags }: { label: string; tags: string[] }) {
+  if (!tags.length) {
+    return null;
+  }
+
   return (
     <div>
       <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">{label}</p>
-      <div className="mt-2 flex flex-wrap gap-2">
+      <div className="mt-1.5 flex flex-wrap gap-1.5">
         {tags.map((tag) => (
-          <span key={`${label}-${tag}`} className="rounded-full border border-border bg-surface-strong px-2.5 py-1 text-xs text-foreground">
+          <span key={`${label}-${tag}`} className="rounded-full border border-border bg-surface-strong px-2 py-0.5 text-[11px] text-foreground">
             {tag}
           </span>
         ))}
@@ -185,8 +201,9 @@ export function DashboardShell() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [filters, setFilters] = useState<FilterState>(initialFilters);
-  const [searchTerm, setSearchTerm] = useState("");
-const [isSearchExpanded, setIsSearchExpanded] = useState(false);
+  const [showMoreContext, setShowMoreContext] = useState(false);
+  const [adminSearchTerm, setAdminSearchTerm] = useState("");
+  const [adminPage, setAdminPage] = useState(1);
   const [collateral, setCollateral] = useState<CollateralRecord[]>([]);
   const [formValues, setFormValues] = useState<CollateralFormValues>(emptyCollateralForm);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -218,7 +235,7 @@ const [isSearchExpanded, setIsSearchExpanded] = useState(false);
       try {
         const { data, error: fetchError } = await supabase
           .from("collateral_entries")
-          .select("id, asset_name, link, asset_type, stages, situations, competitors, segments, industries, intent, summary, recommended_when, priority");
+          .select("id, asset_name, link, asset_type, stages, situations, competitors, segments, industries, tags, intent, summary, recommended_when, priority");
 
         if (fetchError) {
           console.error("[Supabase] Fetch error:", fetchError);
@@ -244,18 +261,50 @@ const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   }, []);
 
   const matchingCollateral = useMemo(() => {
-    const normalizedSearch = searchTerm.trim().toLowerCase();
+    return collateral.filter((record) => {
+      return matchesFilter(record, filters);
+    });
+  }, [collateral, filters]);
+
+  const filteredAdminCollateral = useMemo(() => {
+    const normalizedSearch = adminSearchTerm.trim().toLowerCase();
+
+    if (!normalizedSearch) {
+      return collateral;
+    }
 
     return collateral.filter((record) => {
-      const matchesStructuredFilters = matchesFilter(record, filters);
-      const matchesSearch =
-        !normalizedSearch ||
-        record.assetName.toLowerCase().includes(normalizedSearch) ||
-        record.summary.toLowerCase().includes(normalizedSearch);
-
-      return matchesStructuredFilters && matchesSearch;
+      return [record.assetName, record.assetType, record.intent, record.summary, record.link, ...record.tags]
+        .join(" ")
+        .toLowerCase()
+        .includes(normalizedSearch);
     });
-  }, [collateral, filters, searchTerm]);
+  }, [adminSearchTerm, collateral]);
+
+  const totalAdminPages = useMemo(() => {
+    return Math.max(1, Math.ceil(filteredAdminCollateral.length / ADMIN_PAGE_SIZE));
+  }, [filteredAdminCollateral.length]);
+
+  const currentAdminPage = useMemo(() => {
+    return Math.min(adminPage, totalAdminPages);
+  }, [adminPage, totalAdminPages]);
+
+  const paginatedAdminCollateral = useMemo(() => {
+    const startIndex = (currentAdminPage - 1) * ADMIN_PAGE_SIZE;
+
+    return filteredAdminCollateral.slice(startIndex, startIndex + ADMIN_PAGE_SIZE);
+  }, [currentAdminPage, filteredAdminCollateral]);
+
+  const adminRange = useMemo(() => {
+    if (!filteredAdminCollateral.length) {
+      return { start: 0, end: 0 };
+    }
+
+    const start = (currentAdminPage - 1) * ADMIN_PAGE_SIZE + 1;
+    const end = Math.min(currentAdminPage * ADMIN_PAGE_SIZE, filteredAdminCollateral.length);
+
+    return { start, end };
+  }, [currentAdminPage, filteredAdminCollateral.length]);
 
   const hasActiveCriteria = useMemo(() => {
     return Boolean(
@@ -263,10 +312,11 @@ const [isSearchExpanded, setIsSearchExpanded] = useState(false);
         filters.situation ||
         filters.competitor ||
         filters.segment ||
-        filters.industry ||
-        searchTerm.trim(),
+        filters.industry,
     );
-  }, [filters, searchTerm]);
+  }, [filters]);
+
+  const visibleResultCount = hasActiveCriteria ? matchingCollateral.length : 0;
 
   const headerCopy = useMemo(() => {
     if (view === "admin") {
@@ -278,9 +328,9 @@ const [isSearchExpanded, setIsSearchExpanded] = useState(false);
     }
 
     return {
-      eyebrow: "Sales View",
-      title: "Find the right collateral for the conversation in front of you.",
-      subtitle: "Choose structured deal filters and get the best collateral matches for the current sales context.",
+      eyebrow: "",
+      title: "Your friendly neighborhood deal companion.",
+      subtitle: "Tell me about your deal. I'll find what helps you win.",
     };
   }, [view]);
 
@@ -325,7 +375,7 @@ const [isSearchExpanded, setIsSearchExpanded] = useState(false);
 
   function resetFilters() {
     setFilters(initialFilters);
-    setSearchTerm("");
+    setShowMoreContext(false);
   }
 
   async function handleCopyLink(record: CollateralRecord) {
@@ -377,7 +427,7 @@ async function submitForm() {
         .from("collateral_entries")
         .update(updatePayload)
         .eq("id", existingRecord?.id ?? editingId)
-        .select("id, asset_name, link, asset_type, stages, situations, competitors, segments, industries, intent, summary, recommended_when, priority")
+        .select("id, asset_name, link, asset_type, stages, situations, competitors, segments, industries, tags, intent, summary, recommended_when, priority")
         .single();
 
       if (updateError) {
@@ -411,7 +461,7 @@ async function submitForm() {
     const { data, error: insertError } = await supabase
       .from("collateral_entries")
       .insert(insertPayload)
-      .select("id, asset_name, link, asset_type, stages, situations, competitors, segments, industries, intent, summary, recommended_when, priority")
+      .select("id, asset_name, link, asset_type, stages, situations, competitors, segments, industries, tags, intent, summary, recommended_when, priority")
       .single();
 
     if (insertError) {
@@ -461,13 +511,15 @@ async function deleteCollateral(id: string | number) {
 }
 
   return (
-    <main className="mx-auto min-h-screen max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-      <div className="panel rounded-[28px] px-5 py-5 sm:px-7 sm:py-6">
-        <header className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between mb-6">
+    <main className="mx-auto min-h-screen max-w-[1600px] px-4 py-5 sm:px-6 lg:px-8">
+      <div className="panel rounded-[28px] px-5 py-5 sm:px-6 sm:py-6 lg:px-7">
+        <header className="mb-5 flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
           <div className="max-w-3xl">
-            <span className="mb-3 inline-flex rounded-full border border-border bg-surface-soft px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-accent">
-              {headerCopy.eyebrow}
-            </span>
+            {headerCopy.eyebrow ? (
+              <span className="mb-3 inline-flex rounded-full border border-border bg-surface-soft px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-accent">
+                {headerCopy.eyebrow}
+              </span>
+            ) : null}
             <h1 className="title-font max-w-2xl text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
               {headerCopy.title}
             </h1>
@@ -510,150 +562,176 @@ async function deleteCollateral(id: string | number) {
 
 {view === "sales" ? (
   <section className="space-y-4">
-    <section className="rounded-[26px] border border-border bg-surface-strong p-4">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+    <section className="rounded-[24px] border border-border bg-surface-strong p-4 sm:p-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 className="title-font text-lg font-semibold text-foreground">Filters</h2>
-          <p className="mt-1 text-sm text-muted">
-            Select criteria to find matching collateral
-          </p>
+          <h2 className="title-font text-lg font-semibold text-foreground sm:text-xl">Deal context</h2>
+          <p className="mt-1 text-sm text-muted">Answer the key questions first, then add extra context if you need to narrow the recommendation.</p>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={resetFilters}
-            className="rounded-full border border-border bg-surface-soft px-3 py-1 text-sm font-medium text-foreground transition hover:border-accent hover:text-accent"
-          >
-            Reset
-          </button>
-          <button
-            type="button"
-            onClick={() => setIsSearchExpanded(true)}
-            className="rounded-full border border-border bg-surface-soft px-3 py-1 text-sm font-medium text-foreground transition hover:border-accent hover:text-accent"
-          >
-            Search
-          </button>
-        </div>
-        {isSearchExpanded && (
-          <div className="mt-3 w-full flex items-center gap-2">
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder="Search by asset name or summary"
-              className="flex-1 rounded-xl border border-border bg-surface-soft px-3 py-2 text-foreground outline-none transition focus:border-accent"
-            />
-            <button
-              type="button"
-              onClick={() => setIsSearchExpanded(false)}
-              className="rounded-full border border-border bg-surface-soft h-10 w-10 flex-shrink-0 text-sm font-medium text-foreground transition hover:border-accent hover:text-accent"
-              aria-label="Close search"
-            >
-              ×
-            </button>
-          </div>
-        )}
+        <button
+          type="button"
+          onClick={resetFilters}
+          className="self-start rounded-full border border-border bg-surface-soft px-3 py-1.5 text-sm font-medium text-foreground transition hover:border-accent hover:text-accent"
+        >
+          Reset
+        </button>
       </div>
 
-      <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <MultiFilter label="Stage" value={filters.stage} options={filterOptions.stages} onChange={(value) => handleFilterChange("stage", value)} />
-        <MultiFilter label="Situation" value={filters.situation} options={filterOptions.situations} onChange={(value) => handleFilterChange("situation", value)} />
-        <MultiFilter label="Competitor" value={filters.competitor} options={filterOptions.competitors} onChange={(value) => handleFilterChange("competitor", value)} />
-        <MultiFilter label="Segment" value={filters.segment} options={filterOptions.segments} onChange={(value) => handleFilterChange("segment", value)} />
-        <MultiFilter label="Industry" value={filters.industry} options={filterOptions.industries} onChange={(value) => handleFilterChange("industry", value)} optional />
+      <div className="mt-4 grid gap-4 lg:grid-cols-2">
+        <GuidedFilter
+          label="What stage is the deal at?"
+          value={filters.stage}
+          options={filterOptions.stages}
+          onChange={(value) => handleFilterChange("stage", value)}
+          placeholder="Select stage"
+        />
+        <GuidedFilter
+          label="Which competitors are in the picture?"
+          value={filters.competitor}
+          options={filterOptions.competitors}
+          onChange={(value) => handleFilterChange("competitor", value)}
+          placeholder="Select competitors"
+        />
+      </div>
+
+      <div className="mt-4 border-t border-border/80 pt-3">
+        <button
+          type="button"
+          onClick={() => setShowMoreContext((current) => !current)}
+          className="inline-flex items-center gap-2 text-sm font-semibold text-accent transition hover:text-accent-strong"
+        >
+          <span
+            aria-hidden="true"
+            className={`inline-block text-xs transition ${showMoreContext ? "rotate-180" : ""}`}
+          >
+            v
+          </span>
+          {showMoreContext ? "Hide extra context" : "Add more context"}
+        </button>
+
+        {showMoreContext ? (
+          <div className="mt-3 grid gap-3 lg:grid-cols-3">
+            <GuidedFilter
+              label="What is the situation?"
+              value={filters.situation}
+              options={filterOptions.situations}
+              onChange={(value) => handleFilterChange("situation", value)}
+              placeholder="Select situation"
+              optional
+            />
+            <GuidedFilter
+              label="What segment is the customer?"
+              value={filters.segment}
+              options={filterOptions.segments}
+              onChange={(value) => handleFilterChange("segment", value)}
+              placeholder="Select segment"
+              optional
+            />
+            <GuidedFilter
+              label="What industry is the customer in?"
+              value={filters.industry}
+              options={filterOptions.industries}
+              onChange={(value) => handleFilterChange("industry", value)}
+              placeholder="Select industry"
+              optional
+            />
+          </div>
+        ) : null}
       </div>
     </section>
 
-            <section className="rounded-[26px] border border-border bg-surface-strong p-5">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h2 className="title-font text-xl font-semibold text-foreground">Matching collateral</h2>
-                  <p className="mt-1 text-sm text-muted">Results update from the selected filters and use mock data only.</p>
+    <section className="rounded-[24px] border border-border bg-surface-strong p-4 sm:p-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h2 className="title-font text-xl font-semibold text-foreground">Recommended collateral</h2>
+          <p className="mt-1 text-sm text-muted">Results update instantly as you answer each question.</p>
+        </div>
+        <span className="rounded-full border border-accent/25 bg-accent/10 px-3 py-1 text-xs uppercase tracking-[0.2em] text-accent-strong">
+          {visibleResultCount} results
+        </span>
+      </div>
+
+      <div className="results-group mt-4 rounded-[22px] p-3 sm:p-4">
+      <div className="grid gap-3">
+        {dataError ? (
+          <div className="rounded-[20px] border border-danger/60 bg-surface-soft p-5 text-sm text-danger">
+            Failed to load collateral: {dataError}
+          </div>
+        ) : isLoading ? (
+          <div className="rounded-[20px] border border-border bg-surface-soft p-5 text-sm text-muted">
+            Loading collateral entries...
+          </div>
+        ) : !hasActiveCriteria ? (
+          <div className="rounded-[20px] border border-dashed border-border bg-surface-soft p-6 text-center">
+            <h3 className="title-font text-lg font-semibold text-foreground">Answer the first question to begin</h3>
+            <p className="mt-2 text-sm leading-7 text-muted">
+              Start with the deal stage, then add competitors and any extra context if you need a narrower recommendation.
+            </p>
+          </div>
+        ) : matchingCollateral.length ? (
+          matchingCollateral.map((record) => (
+            <article key={record.id} className="rounded-[20px] border border-border bg-surface-soft p-4 shadow-[0_8px_24px_rgba(15,23,42,0.08)]">
+              <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="title-font text-lg font-semibold text-foreground sm:text-xl">{record.assetName}</h3>
+                    <span className="rounded-full border border-accent/25 bg-accent/10 px-3 py-1 text-xs uppercase tracking-[0.18em] text-accent-strong">
+                      {record.assetType}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-sm leading-6 text-muted">{record.summary}</p>
                 </div>
-                <span className="rounded-full border border-border bg-surface-soft px-3 py-1 text-xs uppercase tracking-[0.2em] text-muted">
-                  {matchingCollateral.length} results
-                </span>
-              </div>
-
-              <div className="mt-5 max-h-[56vh] overflow-y-auto pr-1">
-                <div className="grid gap-4">
-                  {dataError ? (
-                    <div className="rounded-[24px] border border-danger/60 bg-surface-soft p-6 text-sm text-danger">
-                      Failed to load collateral: {dataError}
-                    </div>
-                  ) : isLoading ? (
-                    <div className="rounded-[24px] border border-border bg-surface-soft p-6 text-sm text-muted">
-                      Loading collateral entries...
-                    </div>
-                  ) : !hasActiveCriteria ? (
-                    <div className="rounded-[24px] border border-dashed border-border bg-surface-soft p-8 text-center">
-                      <h3 className="title-font text-lg font-semibold text-foreground">No filters selected</h3>
-                      <p className="mt-2 text-sm leading-7 text-muted">
-                        Choose a stage, situation, competitor, or search term to see matching collateral.
-                      </p>
-                    </div>
-                  ) : matchingCollateral.length ? (
-                    matchingCollateral.map((record) => (
-                      <article key={record.id} className="rounded-[24px] border border-border bg-surface-soft p-5">
-                        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                          <div>
-                            <div className="flex flex-wrap items-center gap-2">
-                              <h3 className="title-font text-xl font-semibold text-foreground">{record.assetName}</h3>
-                              <span className="rounded-full border border-border px-3 py-1 text-xs uppercase tracking-[0.18em] text-accent">
-                                {record.assetType}
-                              </span>
-                            </div>
-                            <p className="mt-3 max-w-2xl text-sm leading-7 text-muted">{record.summary}</p>
-                          </div>
-                          <div className="text-sm text-muted sm:text-right">
-                            <p>Intent: {record.intent}</p>
-                          </div>
-                        </div>
-
-<p className="mt-1 text-[12px] text-muted"><span className="font-semibold">Recommended when:</span> {record.recommendedWhen}</p>
-
-                        <div className="mt-3 flex flex-wrap gap-2 text-[12px] text-muted">
-                          {[...record.stages, ...record.situations, ...record.competitors, ...record.segments, ...record.industries].map((tag) => (
-                            <span key={`${record.id}-${tag}`} className="rounded-full border border-border/50 bg-surface-strong px-2 py-1">
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-
-                        <div className="mt-5 flex flex-wrap items-center gap-3">
-                          <a
-                            href={record.link}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex rounded-full bg-accent px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-accent-strong"
-                          >
-                            Open link
-                          </a>
-                          <button
-                            type="button"
-                            onClick={() => void handleCopyLink(record)}
-                            className="inline-flex rounded-full border border-border bg-surface-strong px-4 py-2 text-sm font-medium text-foreground transition hover:border-accent hover:text-accent"
-                          >
-                            Copy link
-                          </button>
-                          {copiedId === record.id ? <span className="text-sm text-accent">Link copied</span> : null}
-                        </div>
-                      </article>
-                    ))
-                  ) : (
-                    <div className="rounded-[24px] border border-dashed border-border bg-surface-soft p-8 text-center">
-                      <h3 className="title-font text-lg font-semibold text-foreground">No matching collateral</h3>
-                      <p className="mt-2 text-sm leading-7 text-muted">
-                        Adjust one or more filters to broaden the match criteria across the mock library.
-                      </p>
-                    </div>
-                  )}
+                <div className="shrink-0 text-sm text-muted xl:pl-4 xl:text-right">
+                  <p><span className="font-semibold text-accent-warm">Intent:</span> {record.intent}</p>
                 </div>
               </div>
-            </section>
-          </section>
+
+              <p className="mt-2 text-[12px] text-muted"><span className="font-semibold text-foreground">Recommended when:</span> {record.recommendedWhen}</p>
+
+              <div className="mt-3 flex flex-wrap gap-1.5 text-[12px] text-muted">
+                {[...record.tags, ...record.stages, ...record.situations, ...record.competitors, ...record.segments, ...record.industries].map((tag) => (
+                  <span key={`${record.id}-${tag}`} className="rounded-full border border-border/60 bg-surface-contrast px-2 py-0.5 text-foreground/85">
+                    {tag}
+                  </span>
+                ))}
+              </div>
+
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <a
+                    href={record.link}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex rounded-full bg-accent px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-accent-strong"
+                  >
+                    Open link
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => void handleCopyLink(record)}
+                    className="inline-flex rounded-full border border-border bg-surface-strong px-4 py-2 text-sm font-medium text-foreground transition hover:border-accent hover:text-accent"
+                  >
+                    Copy link
+                  </button>
+                </div>
+                {copiedId === record.id ? <span className="text-sm text-accent">Link copied</span> : null}
+              </div>
+            </article>
+          ))
         ) : (
-          <section className="space-y-6 py-6">
+          <div className="rounded-[20px] border border-dashed border-border bg-surface-soft p-6 text-center">
+            <h3 className="title-font text-lg font-semibold text-foreground">No matching collateral</h3>
+            <p className="mt-2 text-sm leading-7 text-muted">
+              Try a different stage, competitor, or add more context to broaden the recommendation.
+            </p>
+          </div>
+        )}
+      </div>
+      </div>
+    </section>
+  </section>
+        ) : (
+          <section className="space-y-4 py-3">
             <CollateralForm
               mode={editingId ? "edit" : "add"}
               values={formValues}
@@ -675,27 +753,72 @@ async function deleteCollateral(id: string | number) {
             ) : null}
 
             <section className="rounded-[26px] border border-border bg-surface-strong p-5">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                 <div>
-<h2 className="title-font text-xl font-semibold text-foreground">Manage Existing Collateral</h2>
-      <p className="mt-1 text-sm text-muted">
-        Edit collateral entries.
-      </p>
+                  <h2 className="title-font text-xl font-semibold text-foreground">Manage Existing Collateral</h2>
+                  <p className="mt-1 text-sm text-muted">
+                    Edit collateral entries.
+                  </p>
+                </div>
+
+                <div className="flex w-full flex-col gap-3 sm:flex-row xl:w-auto xl:min-w-[520px] xl:justify-end">
+                  <label className="relative block flex-1 xl:min-w-[360px]">
+                    <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted">
+                      <SearchIcon />
+                    </span>
+                    <input
+                      type="text"
+                      value={adminSearchTerm}
+                      onChange={(event) => {
+                        setAdminSearchTerm(event.target.value);
+                        setAdminPage(1);
+                      }}
+                      placeholder="Search existing collateral"
+                      className="w-full rounded-xl border border-border bg-surface-soft px-10 py-2.5 text-sm text-foreground outline-none transition focus:border-accent"
+                    />
+                  </label>
+
+                  <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-surface-soft px-3 py-2 text-sm text-muted sm:justify-end">
+                    <span>
+                      {adminRange.start}-{adminRange.end} of {filteredAdminCollateral.length}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setAdminPage(Math.max(1, currentAdminPage - 1))}
+                        disabled={currentAdminPage === 1}
+                        className="rounded-full border border-border bg-surface-strong px-3 py-1 text-foreground transition hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Prev
+                      </button>
+                      <span className="min-w-[52px] text-center text-foreground">
+                        {currentAdminPage} / {totalAdminPages}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setAdminPage(Math.min(totalAdminPages, currentAdminPage + 1))}
+                        disabled={currentAdminPage === totalAdminPages}
+                        className="rounded-full border border-border bg-surface-strong px-3 py-1 text-foreground transition hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div className="mt-5 grid gap-4">
+              <div className="mt-5 grid gap-3 lg:grid-cols-2 2xl:grid-cols-3">
                 {dataError ? (
-                  <div className="rounded-[24px] border border-danger/60 bg-surface-soft p-6 text-sm text-danger">
+                  <div className="rounded-[20px] border border-danger/60 bg-surface-soft p-5 text-sm text-danger lg:col-span-2 2xl:col-span-3">
                     Failed to load collateral: {dataError}
                   </div>
                 ) : isLoading ? (
-                  <div className="rounded-[24px] border border-border bg-surface-soft p-6 text-sm text-muted">
+                  <div className="rounded-[20px] border border-border bg-surface-soft p-5 text-sm text-muted lg:col-span-2 2xl:col-span-3">
                     Loading collateral entries...
                   </div>
-                ) : collateral.map((record) => (
-                  <article key={record.id} className="rounded-[24px] border border-border bg-surface-soft p-4">
-                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                ) : paginatedAdminCollateral.length ? paginatedAdminCollateral.map((record) => (
+                  <article key={record.id} className="rounded-[20px] border border-border bg-surface-soft p-4">
+                    <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <h3 className="title-font text-lg font-semibold text-foreground">{record.assetName}</h3>
@@ -704,39 +827,48 @@ async function deleteCollateral(id: string | number) {
                           </span>
                         </div>
 
-                        <div className="mt-4 grid gap-3 xl:grid-cols-2">
+                        <p className="mt-2 text-sm leading-6 text-muted">{record.summary}</p>
+                        <p className="mt-2 text-xs text-muted"><span className="font-semibold text-foreground">Intent:</span> {record.intent}</p>
+
+                        <div className="mt-3 grid gap-3 sm:grid-cols-2">
                           <TagGroup label="Stages" tags={record.stages} />
                           <TagGroup label="Situations" tags={record.situations} />
                           <TagGroup label="Competitors" tags={record.competitors} />
                           <TagGroup label="Segments" tags={record.segments} />
+                          <TagGroup label="Industries" tags={record.industries} />
+                          <TagGroup label="Tags" tags={record.tags} />
                         </div>
                       </div>
 
-<div className="flex items-center gap-2 lg:pl-4">
-                         <button
-                           type="button"
-                           onClick={() => startEditing(record)}
-                           aria-label={`Edit ${record.assetName}`}
-                           disabled={isSaving}
-                           className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border bg-surface-strong text-foreground transition hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-60"
-                         >
-                           <EditIcon />
-                         </button>
-                         <button
-                           type="button"
-                           onClick={() => deleteCollateral(record.id)}
-                           aria-label={`Delete ${record.assetName}`}
-                           disabled={isSaving}
-                           className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border bg-surface-strong text-muted transition hover:border-danger hover:text-danger disabled:cursor-not-allowed disabled:opacity-60"
-                         >
-                           <TrashIcon />
-                         </button>
-                       </div>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => startEditing(record)}
+                          aria-label={`Edit ${record.assetName}`}
+                          disabled={isSaving}
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-surface-strong text-foreground transition hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          <EditIcon />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => deleteCollateral(record.id)}
+                          aria-label={`Delete ${record.assetName}`}
+                          disabled={isSaving}
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-surface-strong text-muted transition hover:border-danger hover:text-danger disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          <TrashIcon />
+                        </button>
+                      </div>
                     </div>
 
-                    <div className="mt-4 border-t border-border pt-3 text-xs text-muted">ID: {record.id}</div>
+                    <div className="mt-3 border-t border-border pt-2 text-xs text-muted">ID: {record.id}</div>
                   </article>
-                ))}
+                )) : (
+                  <div className="rounded-[20px] border border-dashed border-border bg-surface-soft p-5 text-sm text-muted lg:col-span-2 2xl:col-span-3">
+                    No collateral matches that search.
+                  </div>
+                )}
               </div>
             </section>
           </section>

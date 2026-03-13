@@ -11,6 +11,7 @@ export type CollateralRecord = {
   competitors: string[];
   segments: string[];
   industries: string[];
+  tags: string[];
   intent: string;
   summary: string;
   recommendedWhen: string;
@@ -34,6 +35,7 @@ export type CollateralFormValues = {
   competitors: string[];
   segments: string[];
   industries: string[];
+  tags: string[];
   intent: string;
   summary: string;
   recommendedWhen: string;
@@ -62,6 +64,7 @@ export type CollateralEntryRow = {
   competitors: string[] | null;
   segments: string[] | null;
   industries: string[] | null;
+  tags: string[] | null;
   intent: string;
   summary: string;
   recommended_when: string;
@@ -76,14 +79,35 @@ export const filterOptions = {
     "Battlecard",
     "Case study",
     "PDF",
+    "Web link",
     "Video",
+    "Podcast",
+    "Comics",
+    "AI Comparison",
     "Pricing doc",
     "ROI calculator",
-    "Security doc",
   ],
   intents: ["Educate", "Compare", "Objection handling", "De-risk", "Close"],
-  competitors: ["Salesforce", "HubSpot", "Dynamics", "None"],
-  segments: ["SMB", "Mid-market", "Enterprise", "Govt"],
+  competitors: [
+    "Salesforce",
+    "HubSpot",
+    "Dynamics",
+    "Infor CRM",
+    "Leadsquared",
+    "Odoo",
+    "Monday",
+    "Simple CRM",
+    "Sugar CRM",
+    "Apptivo",
+    "Agile CRM",
+    "Insightly",
+    "Bitrix24",
+    "Pipeliner",
+    "Creatio",
+    "Freshsales",
+    "None",
+  ],
+  segments: ["SMB", "Mid-market", "Enterprise"],
   situations: [
     "First intro call",
     "Product overview needed",
@@ -93,18 +117,40 @@ export const filterOptions = {
     "Migration concern",
     "Security concern",
     "Need proof / case study",
-    "Procurement stage",
-    "Industry-specific pitch",
   ],
   industries: [
     "Generic",
     "Legal",
     "SaaS",
+    "Automotive",
+    "Media",
     "Real Estate",
     "Manufacturing",
     "Healthcare",
     "Education",
     "Financial Services",
+  ],
+  tags: [
+    "Price Objection Slayer",
+    "Competitive Knockout",
+    "CFO Approved",
+    "Executive Friendly",
+    "Enterprise Proof",
+    "Customer Story Gold",
+    "Two-Minute Win",
+    "Demo Booster",
+    "Discovery Helper",
+    "Last-Mile Closer",
+    "Budget Saver",
+    "Buyer Confidence Builder",
+    "Deal Accelerator",
+    "Objection Crusher",
+    "Security Reassurance",
+    "Migration Myth Buster",
+    "ROI Heavy Hitter",
+    "Feature Showstopper",
+    "Sales Rep Favorite",
+    "Trust Builder",
   ],
 };
 
@@ -125,6 +171,7 @@ export const emptyCollateralForm: CollateralFormValues = {
   competitors: [],
   segments: [],
   industries: [],
+  tags: [],
   intent: filterOptions.intents[0],
   summary: "",
   recommendedWhen: "",
@@ -140,6 +187,7 @@ export function recordToFormValues(record: CollateralRecord): CollateralFormValu
     competitors: record.competitors,
     segments: record.segments,
     industries: record.industries,
+    tags: record.tags,
     intent: record.intent,
     summary: record.summary,
     recommendedWhen: record.recommendedWhen,
@@ -157,6 +205,7 @@ export function mapRowToCollateralRecord(row: CollateralEntryRow): CollateralRec
     competitors: row.competitors ?? [],
     segments: row.segments ?? [],
     industries: row.industries ?? [],
+    tags: row.tags ?? [],
     intent: row.intent,
     summary: row.summary,
     recommendedWhen: row.recommended_when,
@@ -177,6 +226,7 @@ export function mapFormValuesToRow(
     competitors: values.competitors,
     segments: values.segments,
     industries: values.industries,
+    tags: values.tags,
     intent: values.intent.trim(),
     summary: values.summary.trim(),
     recommended_when: values.recommendedWhen.trim(),

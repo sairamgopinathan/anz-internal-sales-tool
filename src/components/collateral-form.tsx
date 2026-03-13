@@ -20,21 +20,23 @@ type MultiSelectFieldProps = {
   options: string[];
   error?: string;
   onChange: (nextValue: string[]) => void;
+  className?: string;
+  gridClassName?: string;
 };
 
-function MultiSelectField({ label, value, options, error, onChange }: MultiSelectFieldProps) {
+function MultiSelectField({ label, value, options, error, onChange, className, gridClassName }: MultiSelectFieldProps) {
   function handleChange(option: string, checked: boolean) {
     const nextValue = checked ? [...value, option] : value.filter((item) => item !== option);
     onChange(nextValue);
   }
 
   return (
-    <div>
+    <div className={className}>
       <p className="block text-sm font-medium text-foreground">{label}</p>
-      <div className={`mt-2 rounded-2xl border bg-surface-soft p-3 ${error ? "border-danger" : "border-border"}`}>
-        <div className="grid gap-2 sm:grid-cols-2">
+      <div className={`mt-2 rounded-xl border bg-surface-soft p-2.5 ${error ? "border-danger" : "border-border"}`}>
+        <div className={gridClassName ?? "grid gap-2 sm:grid-cols-2"}>
           {options.map((option) => (
-            <label key={option} className="flex items-center gap-3 rounded-xl px-2 py-2 text-sm text-foreground">
+            <label key={option} className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm text-foreground">
               <input
                 type="checkbox"
                 checked={value.includes(option)}
@@ -57,7 +59,7 @@ export function CollateralForm({ mode, values, errors, onChange, onSubmit, onCan
   }
 
   return (
-    <div className="space-y-5 rounded-[26px] border border-border bg-surface-strong p-5">
+    <div className="space-y-4 rounded-[26px] border border-border bg-surface-strong p-5">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h2 className="title-font text-xl font-semibold text-foreground">
@@ -78,13 +80,13 @@ export function CollateralForm({ mode, values, errors, onChange, onSubmit, onCan
         ) : null}
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <label className="block text-sm font-medium text-foreground">
+      <div className="grid gap-3 xl:grid-cols-20">
+        <label className="block text-sm font-medium text-foreground xl:col-span-6">
           Asset name
           <input
             value={values.assetName}
             onChange={(event) => updateField("assetName", event.target.value)}
-            className={`mt-2 w-full rounded-2xl border bg-surface-soft px-4 py-3 text-foreground outline-none transition focus:border-accent ${
+            className={`mt-2 w-full rounded-xl border bg-surface-soft px-4 py-3 text-foreground outline-none transition focus:border-accent ${
               errors.assetName ? "border-danger" : "border-border"
             }`}
             placeholder="Security review response pack"
@@ -92,12 +94,12 @@ export function CollateralForm({ mode, values, errors, onChange, onSubmit, onCan
           {errors.assetName ? <span className="mt-2 block text-xs text-danger">{errors.assetName}</span> : null}
         </label>
 
-        <label className="block text-sm font-medium text-foreground">
+        <label className="block text-sm font-medium text-foreground xl:col-span-7">
           Link
           <input
             value={values.link}
             onChange={(event) => updateField("link", event.target.value)}
-            className={`mt-2 w-full rounded-2xl border bg-surface-soft px-4 py-3 text-foreground outline-none transition focus:border-accent ${
+            className={`mt-2 w-full rounded-xl border bg-surface-soft px-4 py-3 text-foreground outline-none transition focus:border-accent ${
               errors.link ? "border-danger" : "border-border"
             }`}
             placeholder="https://example.com/asset"
@@ -105,13 +107,13 @@ export function CollateralForm({ mode, values, errors, onChange, onSubmit, onCan
           {errors.link ? <span className="mt-2 block text-xs text-danger">{errors.link}</span> : null}
         </label>
 
-        <label className="block text-sm font-medium text-foreground">
+        <label className="block text-sm font-medium text-foreground sm:col-span-1 xl:col-span-3">
           Asset type
           <div className="relative mt-2">
             <select
               value={values.assetType}
               onChange={(event) => updateField("assetType", event.target.value)}
-              className={`app-select w-full rounded-2xl border px-4 py-3 pr-10 outline-none transition focus:border-accent ${
+              className={`app-select w-full rounded-xl border bg-surface-soft px-4 py-3 pr-10 outline-none transition focus:border-accent ${
                 errors.assetType ? "border-danger" : "border-border"
               }`}
             >
@@ -130,13 +132,13 @@ export function CollateralForm({ mode, values, errors, onChange, onSubmit, onCan
           {errors.assetType ? <span className="mt-2 block text-xs text-danger">{errors.assetType}</span> : null}
         </label>
 
-        <label className="block text-sm font-medium text-foreground">
+        <label className="block text-sm font-medium text-foreground sm:col-span-1 xl:col-span-4">
           Intent
           <div className="relative mt-2">
             <select
               value={values.intent}
               onChange={(event) => updateField("intent", event.target.value)}
-              className="app-select w-full rounded-2xl border border-border px-4 py-3 pr-10 outline-none transition focus:border-accent"
+              className="app-select w-full rounded-xl border border-border bg-surface-soft px-4 py-3 pr-10 outline-none transition focus:border-accent"
             >
               {filterOptions.intents.map((option) => (
                 <option key={option} value={option}>
@@ -154,62 +156,83 @@ export function CollateralForm({ mode, values, errors, onChange, onSubmit, onCan
 
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-3 xl:grid-cols-20 xl:items-start">
         <MultiSelectField
+          className="xl:col-span-4"
           label="Stages"
           value={values.stages}
           options={filterOptions.stages}
           error={errors.stages}
           onChange={(nextValue) => updateField("stages", nextValue)}
+          gridClassName="grid gap-1.5 sm:grid-cols-2"
         />
         <MultiSelectField
+          className="xl:col-span-3"
+          label="Segments"
+          value={values.segments}
+          options={filterOptions.segments}
+          onChange={(nextValue) => updateField("segments", nextValue)}
+          gridClassName="grid gap-1.5 sm:grid-cols-1 xl:grid-cols-1"
+        />
+        <MultiSelectField
+          className="xl:col-span-5"
+          label="Industries"
+          value={values.industries}
+          options={filterOptions.industries}
+          onChange={(nextValue) => updateField("industries", nextValue)}
+          gridClassName="grid gap-1.5 sm:grid-cols-2 xl:grid-cols-2"
+        />
+        <MultiSelectField
+          className="xl:col-span-8"
           label="Situations"
           value={values.situations}
           options={filterOptions.situations}
           error={errors.situations}
           onChange={(nextValue) => updateField("situations", nextValue)}
+          gridClassName="grid gap-1.5 sm:grid-cols-2 xl:grid-cols-3"
         />
+      </div>
+
+      <div className="grid gap-3 xl:grid-cols-20 xl:items-start">
         <MultiSelectField
+          className="xl:col-span-8"
           label="Competitors"
           value={values.competitors}
           options={filterOptions.competitors}
           onChange={(nextValue) => updateField("competitors", nextValue)}
+          gridClassName="grid gap-1.5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"
         />
         <MultiSelectField
-          label="Segments"
-          value={values.segments}
-          options={filterOptions.segments}
-          onChange={(nextValue) => updateField("segments", nextValue)}
-        />
-        <MultiSelectField
-          label="Industries"
-          value={values.industries}
-          options={filterOptions.industries}
-          onChange={(nextValue) => updateField("industries", nextValue)}
+          className="xl:col-span-12"
+          label="Tags"
+          value={values.tags}
+          options={filterOptions.tags}
+          onChange={(nextValue) => updateField("tags", nextValue)}
+          gridClassName="grid gap-1.5 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-5"
         />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <label className="block text-sm font-medium text-foreground">
+      <div className="grid gap-3 xl:grid-cols-20">
+        <label className="block text-sm font-medium text-foreground xl:col-span-10">
           Summary
           <textarea
             value={values.summary}
             onChange={(event) => updateField("summary", event.target.value)}
-            rows={4}
-            className={`mt-2 w-full rounded-2xl border bg-surface-soft px-4 py-3 text-foreground outline-none transition focus:border-accent ${
+            rows={5}
+            className={`mt-2 w-full rounded-xl border bg-surface-soft px-4 py-3 text-foreground outline-none transition focus:border-accent ${
               errors.summary ? "border-danger" : "border-border"
             }`}
           />
           {errors.summary ? <span className="mt-2 block text-xs text-danger">{errors.summary}</span> : null}
         </label>
 
-        <label className="block text-sm font-medium text-foreground">
+        <label className="block text-sm font-medium text-foreground xl:col-span-10">
           Recommended when
           <textarea
             value={values.recommendedWhen}
             onChange={(event) => updateField("recommendedWhen", event.target.value)}
-            rows={4}
-            className={`mt-2 w-full rounded-2xl border bg-surface-soft px-4 py-3 text-foreground outline-none transition focus:border-accent ${
+            rows={5}
+            className={`mt-2 w-full rounded-xl border bg-surface-soft px-4 py-3 text-foreground outline-none transition focus:border-accent ${
               errors.recommendedWhen ? "border-danger" : "border-border"
             }`}
           />
@@ -217,7 +240,7 @@ export function CollateralForm({ mode, values, errors, onChange, onSubmit, onCan
         </label>
       </div>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+      <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
         {mode === "edit" ? (
           <button
             type="button"

@@ -1,31 +1,43 @@
 @import "tailwindcss";
 
 :root {
-  --background: #07111f;
-  --foreground: #edf4ff;
-  --surface: rgba(10, 22, 39, 0.86);
-  --surface-strong: rgba(14, 30, 52, 0.96);
-  --surface-soft: rgba(148, 163, 184, 0.12);
-  --border: rgba(148, 163, 184, 0.18);
-  --muted: #94a3b8;
-  --accent: #5eead4;
-  --accent-strong: #22d3ee;
+  --background: #070a11;
+  --foreground: #f5f7fb;
+  --surface: rgba(18, 23, 34, 0.82);
+  --surface-strong: rgba(24, 30, 43, 0.96);
+  --surface-soft: rgba(44, 52, 66, 0.86);
+  --border: rgba(148, 163, 184, 0.16);
+  --muted: #9da7b8;
+  --accent: #4f8cff;
+  --accent-strong: #77a5ff;
+  --accent-warm: #ff9f0a;
+  --accent-rose: #ff6482;
+  --surface-contrast: rgba(30, 36, 49, 0.98);
+  --surface-elevated: rgba(34, 41, 55, 0.94);
   --danger: #f87171;
-  --shadow: 0 24px 80px rgba(2, 6, 23, 0.45);
+  --shadow: 0 30px 80px rgba(0, 0, 0, 0.38);
 }
 
 :root[data-theme="light"] {
-  --background: #f4f7fb;
-  --foreground: #0f172a;
-  --surface: rgba(255, 255, 255, 0.9);
-  --surface-strong: rgba(255, 255, 255, 0.98);
-  --surface-soft: rgba(15, 23, 42, 0.06);
-  --border: rgba(15, 23, 42, 0.08);
-  --muted: #475569;
-  --accent: #0f766e;
-  --accent-strong: #0891b2;
+  --background: #f2f4f8;
+  --foreground: #1d1d1f;
+  --surface: rgba(255, 255, 255, 0.76);
+  --surface-strong: rgba(255, 255, 255, 0.94);
+  --surface-soft: rgba(243, 244, 246, 0.96);
+  --border: rgba(107, 114, 128, 0.14);
+  --muted: #6e7380;
+  --accent: #0a84ff;
+  --accent-strong: #0066cc;
+  --accent-warm: #ff9f0a;
+  --accent-rose: #ff375f;
+  --surface-contrast: rgba(246, 247, 250, 0.98);
+  --surface-elevated: rgba(255, 255, 255, 0.98);
   --danger: #dc2626;
-  --shadow: 0 24px 80px rgba(15, 23, 42, 0.12);
+  --shadow: 0 20px 60px rgba(15, 23, 42, 0.1);
+  background:
+    radial-gradient(circle at top left, rgba(10, 132, 255, 0.13), transparent 28%),
+    radial-gradient(circle at top right, rgba(255, 159, 10, 0.08), transparent 22%),
+    linear-gradient(180deg, #f8f9fb 0%, #eef1f5 100%);
 }
 
 @theme inline {
@@ -38,9 +50,13 @@
   --color-muted: var(--muted);
   --color-accent: var(--accent);
   --color-accent-strong: var(--accent-strong);
+  --color-accent-warm: var(--accent-warm);
+  --color-accent-rose: var(--accent-rose);
+  --color-surface-contrast: var(--surface-contrast);
+  --color-surface-elevated: var(--surface-elevated);
   --color-danger: var(--danger);
-  --font-sans: var(--font-manrope);
-  --font-mono: var(--font-space-grotesk);
+  --font-sans: "SF Pro Text", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: "SF Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
 * {
@@ -49,9 +65,9 @@
 
 html {
   background:
-    radial-gradient(circle at top left, rgba(34, 211, 238, 0.2), transparent 28%),
-    radial-gradient(circle at top right, rgba(14, 165, 233, 0.18), transparent 24%),
-    linear-gradient(180deg, rgba(7, 17, 31, 1) 0%, rgba(4, 10, 22, 1) 100%);
+    radial-gradient(circle at top left, rgba(79, 140, 255, 0.18), transparent 28%),
+    radial-gradient(circle at top right, rgba(255, 159, 10, 0.12), transparent 24%),
+    linear-gradient(180deg, #0a0d14 0%, #05070c 100%);
   background-color: var(--background);
 }
 
@@ -66,8 +82,9 @@ html {
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-manrope), sans-serif;
+  font-family: "SF Pro Text", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   min-height: 100vh;
+  letter-spacing: -0.01em;
 }
 
 body::before {
@@ -75,11 +92,20 @@ body::before {
   position: fixed;
   inset: 0;
   background:
-    radial-gradient(circle at 20% 20%, rgba(94, 234, 212, 0.18), transparent 24%),
-    radial-gradient(circle at 80% 0%, rgba(56, 189, 248, 0.16), transparent 22%),
-    linear-gradient(135deg, transparent 0%, rgba(148, 163, 184, 0.04) 100%);
+    radial-gradient(circle at 18% 18%, rgba(79, 140, 255, 0.16), transparent 22%),
+    radial-gradient(circle at 84% 8%, rgba(255, 100, 130, 0.08), transparent 18%),
+    radial-gradient(circle at 72% 70%, rgba(255, 159, 10, 0.08), transparent 18%),
+    linear-gradient(135deg, transparent 0%, rgba(148, 163, 184, 0.03) 100%);
   pointer-events: none;
   z-index: -1;
+}
+
+:root[data-theme="light"] body::before {
+  background:
+    radial-gradient(circle at 18% 20%, rgba(10, 132, 255, 0.09), transparent 22%),
+    radial-gradient(circle at 84% 6%, rgba(255, 55, 95, 0.05), transparent 18%),
+    radial-gradient(circle at 78% 76%, rgba(255, 159, 10, 0.06), transparent 18%),
+    linear-gradient(135deg, transparent 0%, rgba(148, 163, 184, 0.04) 100%);
 }
 
 button,
@@ -87,6 +113,22 @@ input,
 select,
 textarea {
   font: inherit;
+}
+
+input,
+textarea,
+select,
+button {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+:root[data-theme="light"] input,
+:root[data-theme="light"] textarea,
+:root[data-theme="light"] select,
+:root[data-theme="light"] button {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
 .app-select {
@@ -129,9 +171,25 @@ select option {
   background: var(--surface);
   border: 1px solid var(--border);
   box-shadow: var(--shadow);
-  backdrop-filter: blur(18px);
+  backdrop-filter: blur(24px);
+}
+
+.results-group {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-contrast) 92%, black 8%) 0%, var(--surface-elevated) 100%);
+  border: 1px solid color-mix(in srgb, var(--border) 82%, var(--accent) 18%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 14px 30px rgba(2, 6, 23, 0.12);
+}
+
+:root[data-theme="light"] .results-group {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.82),
+    0 16px 36px rgba(148, 163, 184, 0.14);
 }
 
 .title-font {
-  font-family: var(--font-space-grotesk), sans-serif;
+  font-family: "SF Pro Display", "SF Pro Text", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  letter-spacing: -0.03em;
 }
