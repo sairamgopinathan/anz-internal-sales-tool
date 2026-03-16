@@ -76,6 +76,7 @@ export const filterOptions = {
   assetTypes: [
     "Deck",
     "One-pager",
+    "Sales guide",
     "Battlecard",
     "Case study",
     "PDF",
