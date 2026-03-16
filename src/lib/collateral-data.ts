@@ -71,6 +71,72 @@ export type CollateralEntryRow = {
   priority: number | null;
 };
 
+const assetTypeAliases: Record<string, string> = {
+  "AI Comparison": "Detailed comparison sheet",
+  Ebooks: "Ebook",
+};
+
+const tagAliases: Record<string, string> = {
+  "AI Confidence Builder": "🤖 AI Confidence Builder",
+  "Price Objection Slayer": "💰 Price Objection Slayer",
+  "Competitive Knockout": "🥊 Competitive Knockout",
+  "CFO Approved": "📊 CFO Approved",
+  "Executive Friendly": "👔 Executive Friendly",
+  "Enterprise Proof": "🏢 Enterprise Proof",
+  "Customer Story Gold": "🏆 Customer Story Gold",
+  "Two-Minute Win": "⚡ Two-Minute Win",
+  "Demo Booster": "🎬 Demo Booster",
+  "Discovery Helper": "🔎 Discovery Helper",
+  "Last-Mile Closer": "🏁 Last-Mile Closer",
+  "Budget Saver": "💸 Budget Saver",
+  "Buyer Confidence Builder": "🤝 Buyer Confidence Builder",
+  "Deal Accelerator": "🚀 Deal Accelerator",
+  "Objection Crusher": "🛡️ Objection Crusher",
+  "Security Reassurance": "🔐 Security Reassurance",
+  "Migration Myth Buster": "🔄 Migration Myth Buster",
+  "ROI Heavy Hitter": "📈 ROI Heavy Hitter",
+  "Feature Showstopper": "⭐ Feature Showstopper",
+  "Sales Rep Favorite": "❤️ Sales Rep Favorite",
+  "Trust Builder": "🤝 Trust Builder",
+  "Internal use only": "🔒 Internal Use Only",
+  "Internal Use Only": "🔒 Internal Use Only",
+  "Created with AI": "🧠 Created with AI",
+};
+
+export const competitorDomains: Record<string, string | null> = {
+  Salesforce: "salesforce.com",
+  HubSpot: "hubspot.com",
+  Dynamics: "dynamics.microsoft.com",
+  "Infor CRM": "infor.com",
+  Leadsquared: "leadsquared.com",
+  Odoo: "odoo.com",
+  Monday: "monday.com",
+  "Simple CRM": "simple-crm.io",
+  "Sugar CRM": "sugarcrm.com",
+  Apptivo: "apptivo.com",
+  "Agile CRM": "agilecrm.com",
+  Insightly: "insightly.com",
+  Bitrix24: "bitrix24.com",
+  Pipeliner: "pipelinersales.com",
+  Creatio: "creatio.com",
+  Freshsales: "freshworks.com",
+  None: null,
+};
+
+export function getCompetitorFaviconUrl(name: string) {
+  const domain = competitorDomains[name];
+
+  if (!domain) {
+    return null;
+  }
+
+  return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64`;
+}
+
+function normalizeAssetType(value: string) {
+  return assetTypeAliases[value] ?? value;
+}
+
 function normalizeSituation(value: string) {
   return value === "Demo follow-up" ? "CX asks about a specific feature" : value;
 }
@@ -79,20 +145,34 @@ function normalizeSituations(values: string[]) {
   return values.map(normalizeSituation);
 }
 
+function normalizeTag(value: string) {
+  return tagAliases[value] ?? value;
+}
+
+function normalizeTags(values: string[]) {
+  return values.map(normalizeTag);
+}
+
 export const filterOptions = {
   stages: ["Discovery", "Demo", "Evaluation", "Decision"],
   assetTypes: [
     "Deck",
     "One-pager",
+    "Ebook",
     "Sales guide",
     "Battlecard",
     "Case study",
+    "Detailed comparison sheet",
+    "Brief comparison sheet",
     "PDF",
     "Web link",
     "Video",
+    "Webinar",
     "Podcast",
+    "Screenshots",
+    "Brochures",
+    "Short brochures",
     "Comics",
-    "AI Comparison",
     "Pricing doc",
     "ROI calculator",
   ],
@@ -124,6 +204,7 @@ export const filterOptions = {
     "Competitor comparison",
     "Pricing objection",
     "CX asks about AI",
+    "Partner enablement",
     "Migration concern",
     "Security concern",
     "Need proof / case study",
@@ -141,27 +222,29 @@ export const filterOptions = {
     "Financial Services",
   ],
   tags: [
-    "AI Confidence Builder",
-    "Price Objection Slayer",
-    "Competitive Knockout",
-    "CFO Approved",
-    "Executive Friendly",
-    "Enterprise Proof",
-    "Customer Story Gold",
-    "Two-Minute Win",
-    "Demo Booster",
-    "Discovery Helper",
-    "Last-Mile Closer",
-    "Budget Saver",
-    "Buyer Confidence Builder",
-    "Deal Accelerator",
-    "Objection Crusher",
-    "Security Reassurance",
-    "Migration Myth Buster",
-    "ROI Heavy Hitter",
-    "Feature Showstopper",
-    "Sales Rep Favorite",
-    "Trust Builder",
+    "🤖 AI Confidence Builder",
+    "💰 Price Objection Slayer",
+    "🥊 Competitive Knockout",
+    "📊 CFO Approved",
+    "👔 Executive Friendly",
+    "🏢 Enterprise Proof",
+    "🏆 Customer Story Gold",
+    "⚡ Two-Minute Win",
+    "🎬 Demo Booster",
+    "🔎 Discovery Helper",
+    "🏁 Last-Mile Closer",
+    "💸 Budget Saver",
+    "🤝 Buyer Confidence Builder",
+    "🚀 Deal Accelerator",
+    "🛡️ Objection Crusher",
+    "🔐 Security Reassurance",
+    "🔄 Migration Myth Buster",
+    "📈 ROI Heavy Hitter",
+    "⭐ Feature Showstopper",
+    "❤️ Sales Rep Favorite",
+    "🤝 Trust Builder",
+    "🔒 Internal Use Only",
+    "🧠 Created with AI",
   ],
 };
 
@@ -192,13 +275,13 @@ export function recordToFormValues(record: CollateralRecord): CollateralFormValu
   return {
     assetName: record.assetName,
     link: record.link,
-    assetType: record.assetType,
+    assetType: normalizeAssetType(record.assetType),
     stages: record.stages,
     situations: normalizeSituations(record.situations),
     competitors: record.competitors,
     segments: record.segments,
     industries: record.industries,
-    tags: record.tags,
+    tags: normalizeTags(record.tags),
     intent: record.intent,
     summary: record.summary,
     recommendedWhen: record.recommendedWhen,
@@ -210,13 +293,13 @@ export function mapRowToCollateralRecord(row: CollateralEntryRow): CollateralRec
     id: row.id,
     assetName: row.asset_name,
     link: row.link,
-    assetType: row.asset_type,
+    assetType: normalizeAssetType(row.asset_type),
     stages: row.stages ?? [],
     situations: normalizeSituations(row.situations ?? []),
     competitors: row.competitors ?? [],
     segments: row.segments ?? [],
     industries: row.industries ?? [],
-    tags: row.tags ?? [],
+    tags: normalizeTags(row.tags ?? []),
     intent: row.intent,
     summary: row.summary,
     recommendedWhen: row.recommended_when,
@@ -231,13 +314,13 @@ export function mapFormValuesToRow(
   return {
     asset_name: values.assetName.trim(),
     link: values.link.trim(),
-    asset_type: values.assetType,
+    asset_type: normalizeAssetType(values.assetType),
     stages: values.stages,
     situations: normalizeSituations(values.situations),
     competitors: values.competitors,
     segments: values.segments,
     industries: values.industries,
-    tags: values.tags,
+    tags: normalizeTags(values.tags),
     intent: values.intent.trim(),
     summary: values.summary.trim(),
     recommended_when: values.recommendedWhen.trim(),

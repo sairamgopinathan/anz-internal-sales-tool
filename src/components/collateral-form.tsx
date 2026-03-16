@@ -1,6 +1,9 @@
+import type { ReactNode } from "react";
+
 import {
   emptyCollateralForm,
   filterOptions,
+  getCompetitorFaviconUrl,
   type CollateralFormErrors,
   type CollateralFormValues,
 } from "@/lib/collateral-data";
@@ -23,9 +26,34 @@ type MultiSelectFieldProps = {
   className?: string;
   gridClassName?: string;
   allOption?: string;
+  renderOption?: (option: string) => ReactNode;
 };
 
-function MultiSelectField({ label, value, options, error, onChange, className, gridClassName, allOption }: MultiSelectFieldProps) {
+function CompetitorOption({ option }: { option: string }) {
+  const faviconUrl = getCompetitorFaviconUrl(option);
+
+  return (
+    <span className="flex min-w-0 items-center gap-2.5">
+      {faviconUrl ? (
+        <span
+          aria-hidden="true"
+          className="h-4 w-4 shrink-0 rounded-[4px] border border-border/60 bg-white bg-contain bg-center bg-no-repeat"
+          style={{ backgroundImage: `url(${faviconUrl})` }}
+        />
+      ) : (
+        <span
+          aria-hidden="true"
+          className="flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px] border border-border/60 bg-surface-strong text-[10px] text-muted"
+        >
+          -
+        </span>
+      )}
+      <span className="truncate">{option}</span>
+    </span>
+  );
+}
+
+function MultiSelectField({ label, value, options, error, onChange, className, gridClassName, allOption, renderOption }: MultiSelectFieldProps) {
   function handleChange(option: string, checked: boolean) {
     const baseOptions = allOption ? options.filter((item) => item !== allOption) : options;
     let nextValue: string[];
@@ -55,11 +83,11 @@ function MultiSelectField({ label, value, options, error, onChange, className, g
             <label key={option} className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm text-foreground">
               <input
                 type="checkbox"
-                checked={value.includes(option)}
+                checked={allOption && option === allOption ? options.filter((item) => item !== allOption).every((item) => value.includes(item)) : value.includes(option)}
                 onChange={(event) => handleChange(option, event.target.checked)}
                 className="h-4 w-4 rounded border-border bg-surface-soft text-accent focus:ring-accent"
               />
-              <span>{option}</span>
+              {renderOption ? renderOption(option) : <span>{option}</span>}
             </label>
           ))}
         </div>
@@ -218,6 +246,7 @@ export function CollateralForm({ mode, values, errors, onChange, onSubmit, onCan
           options={filterOptions.competitors}
           onChange={(nextValue) => updateField("competitors", nextValue)}
           gridClassName="grid gap-1.5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"
+          renderOption={(option) => <CompetitorOption option={option} />}
         />
         <MultiSelectField
           className="xl:col-span-12"

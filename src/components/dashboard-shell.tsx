@@ -6,6 +6,7 @@ import { CollateralForm } from "@/components/collateral-form";
 import {
   emptyCollateralForm,
   filterOptions,
+  getCompetitorFaviconUrl,
   initialFilters,
   mapFormValuesToRow,
   mapRowToCollateralRecord,
@@ -215,12 +216,30 @@ function TagGroup({ label, tags }: { label: string; tags: string[] }) {
     return null;
   }
 
+  const isCompetitorGroup = label === "Competitors";
+
   return (
     <div>
       <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">{label}</p>
       <div className="mt-1.5 flex flex-wrap gap-1.5">
         {tags.map((tag) => (
-          <span key={`${label}-${tag}`} className="rounded-full border border-border bg-surface-strong px-2 py-0.5 text-[11px] text-foreground">
+          <span key={`${label}-${tag}`} className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface-strong px-2 py-0.5 text-[11px] text-foreground">
+            {isCompetitorGroup ? (
+              getCompetitorFaviconUrl(tag) ? (
+                <span
+                  aria-hidden="true"
+                  className="h-3.5 w-3.5 shrink-0 rounded-[3px] border border-border/60 bg-white bg-contain bg-center bg-no-repeat"
+                  style={{ backgroundImage: `url(${getCompetitorFaviconUrl(tag)})` }}
+                />
+              ) : (
+                <span
+                  aria-hidden="true"
+                  className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-[3px] border border-border/60 bg-surface px-0.5 text-[9px] text-muted"
+                >
+                  -
+                </span>
+              )
+            ) : null}
             {tag}
           </span>
         ))}
