@@ -142,14 +142,48 @@ function matchesFilter(record: CollateralRecord, filters: FilterState) {
   );
 }
 
-function validateForm(values: CollateralFormValues): CollateralFormErrors {
+function normalizeLinkForComparison(link: string) {
+  const trimmedLink = link.trim();
+
+  if (!trimmedLink) {
+    return "";
+  }
+
+  try {
+    const normalizedUrl = new URL(trimmedLink);
+    normalizedUrl.hash = "";
+
+    if (normalizedUrl.pathname !== "/") {
+      normalizedUrl.pathname = normalizedUrl.pathname.replace(/\/+$/, "") || "/";
+    }
+
+    return normalizedUrl.toString();
+  } catch {
+    return trimmedLink.replace(/\/+$/, "");
+  }
+}
+
+function validateForm(
+  values: CollateralFormValues,
+  collateral: CollateralRecord[],
+  editingId: string | null,
+): CollateralFormErrors {
   const errors: CollateralFormErrors = {};
+  const normalizedLink = normalizeLinkForComparison(values.link);
 
   if (!values.assetName.trim()) {
     errors.assetName = "Add an asset name.";
   }
   if (!values.link.trim()) {
     errors.link = "Add a link.";
+  } else {
+    const duplicateRecord = collateral.find((record) => {
+      return normalizeLinkForComparison(record.link) === normalizedLink && String(record.id) !== String(editingId ?? "");
+    });
+
+    if (duplicateRecord) {
+      errors.link = `This link already exists for ${duplicateRecord.assetName}.`;
+    }
   }
   if (!values.assetType) {
     errors.assetType = "Select an asset type.";
@@ -405,7 +439,7 @@ export function DashboardShell() {
   }
 
 async function submitForm() {
-  const errors = validateForm(formValues);
+  const errors = validateForm(formValues, collateral, editingId);
 
   if (Object.keys(errors).length > 0) {
     setFormErrors(errors);
@@ -741,7 +775,7 @@ async function deleteCollateral(id: string | number) {
               onChange={(nextValues) => {
                 setFormValues(nextValues);
                 if (Object.keys(formErrors).length > 0) {
-                  setFormErrors(validateForm(nextValues));
+                  setFormErrors(validateForm(nextValues, collateral, editingId));
                 }
               }}
               onSubmit={submitForm}
