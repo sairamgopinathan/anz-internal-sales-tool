@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 
 import { CollateralForm } from "@/components/collateral-form";
 import {
@@ -130,6 +130,142 @@ function GuidedFilter({
         </span>
       </div>
     </label>
+  );
+}
+
+function CompetitorGuidedFilter({
+  label,
+  value,
+  options,
+  onChange,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  options: string[];
+  onChange: (value: string) => void;
+  placeholder: string;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    function handlePointerDown(event: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handlePointerDown);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+    };
+  }, [isOpen]);
+
+  const faviconUrl = value ? getCompetitorFaviconUrl(value) : null;
+
+  return (
+    <div ref={containerRef} className="relative block text-sm font-medium text-foreground">
+      <span className="mb-2 block text-sm font-semibold text-foreground">{label}</span>
+      <button
+        type="button"
+        onClick={() => setIsOpen((current) => !current)}
+        className="flex w-full items-center justify-between rounded-xl border border-border bg-surface-soft px-3.5 py-3 text-left text-sm text-foreground outline-none transition hover:border-accent focus:border-accent"
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+      >
+        <span className="flex min-w-0 items-center gap-2.5">
+          {value ? (
+            faviconUrl ? (
+              <span
+                aria-hidden="true"
+                className="h-4 w-4 shrink-0 rounded-[4px] border border-border/60 bg-white bg-contain bg-center bg-no-repeat"
+                style={{ backgroundImage: `url(${faviconUrl})` }}
+              />
+            ) : (
+              <span
+                aria-hidden="true"
+                className="flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px] border border-border/60 bg-surface-strong text-[10px] text-muted"
+              >
+                -
+              </span>
+            )
+          ) : null}
+          <span className={value ? "truncate" : "truncate text-muted"}>{value || placeholder}</span>
+        </span>
+        <span className="pointer-events-none ml-3 text-muted">
+          <svg
+            aria-hidden="true"
+            className={`h-4 w-4 transition ${isOpen ? "rotate-180" : ""}`}
+            viewBox="0 0 20 20"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="m6 8 4 4 4-4" />
+          </svg>
+        </span>
+      </button>
+
+      {isOpen ? (
+        <div className="absolute left-0 right-0 z-30 mt-2 overflow-hidden rounded-xl border border-border bg-surface-strong shadow-[0_18px_50px_rgba(2,6,23,0.24)]">
+          <div className="max-h-72 overflow-y-auto p-1.5" role="listbox" aria-label={label}>
+            <button
+              type="button"
+              onClick={() => {
+                onChange("");
+                setIsOpen(false);
+              }}
+              className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition hover:bg-surface-soft ${
+                value ? "text-muted" : "bg-surface-soft text-foreground"
+              }`}
+            >
+              <span className="truncate">{placeholder}</span>
+            </button>
+            {options.map((option) => {
+              const optionFaviconUrl = getCompetitorFaviconUrl(option);
+
+              return (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => {
+                    onChange(option);
+                    setIsOpen(false);
+                  }}
+                  className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition hover:bg-surface-soft ${
+                    value === option ? "bg-surface-soft text-foreground" : "text-foreground"
+                  }`}
+                  role="option"
+                  aria-selected={value === option}
+                >
+                  {optionFaviconUrl ? (
+                    <span
+                      aria-hidden="true"
+                      className="h-4 w-4 shrink-0 rounded-[4px] border border-border/60 bg-white bg-contain bg-center bg-no-repeat"
+                      style={{ backgroundImage: `url(${optionFaviconUrl})` }}
+                    />
+                  ) : (
+                    <span
+                      aria-hidden="true"
+                      className="flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px] border border-border/60 bg-surface text-[10px] text-muted"
+                    >
+                      -
+                    </span>
+                  )}
+                  <span className="truncate">{option}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -645,7 +781,7 @@ async function deleteCollateral(id: string | number) {
           onChange={(value) => handleFilterChange("situation", value)}
           placeholder="Select situation"
         />
-        <GuidedFilter
+        <CompetitorGuidedFilter
           label="Which competitors are in the picture?"
           value={filters.competitor}
           options={filterOptions.competitors}
