@@ -71,6 +71,14 @@ export type CollateralEntryRow = {
   priority: number | null;
 };
 
+function normalizeSituation(value: string) {
+  return value === "Demo follow-up" ? "CX asks about a specific feature" : value;
+}
+
+function normalizeSituations(values: string[]) {
+  return values.map(normalizeSituation);
+}
+
 export const filterOptions = {
   stages: ["Discovery", "Demo", "Evaluation", "Decision"],
   assetTypes: [
@@ -112,7 +120,7 @@ export const filterOptions = {
   situations: [
     "First intro call",
     "Product overview needed",
-    "Demo follow-up",
+    "CX asks about a specific feature",
     "Competitor comparison",
     "Pricing objection",
     "CX asks about AI",
@@ -186,7 +194,7 @@ export function recordToFormValues(record: CollateralRecord): CollateralFormValu
     link: record.link,
     assetType: record.assetType,
     stages: record.stages,
-    situations: record.situations,
+    situations: normalizeSituations(record.situations),
     competitors: record.competitors,
     segments: record.segments,
     industries: record.industries,
@@ -204,7 +212,7 @@ export function mapRowToCollateralRecord(row: CollateralEntryRow): CollateralRec
     link: row.link,
     assetType: row.asset_type,
     stages: row.stages ?? [],
-    situations: row.situations ?? [],
+    situations: normalizeSituations(row.situations ?? []),
     competitors: row.competitors ?? [],
     segments: row.segments ?? [],
     industries: row.industries ?? [],
@@ -225,7 +233,7 @@ export function mapFormValuesToRow(
     link: values.link.trim(),
     asset_type: values.assetType,
     stages: values.stages,
-    situations: values.situations,
+    situations: normalizeSituations(values.situations),
     competitors: values.competitors,
     segments: values.segments,
     industries: values.industries,
