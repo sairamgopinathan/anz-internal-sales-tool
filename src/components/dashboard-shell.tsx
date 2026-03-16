@@ -133,11 +133,18 @@ function GuidedFilter({
 }
 
 function matchesFilter(record: CollateralRecord, filters: FilterState) {
+  const baseSegments = filterOptions.segments.filter((segment) => segment !== "All");
+  const matchesSegment = !filters.segment
+    ? true
+    : filters.segment === "All"
+      ? record.segments.includes("All") || baseSegments.every((segment) => record.segments.includes(segment))
+      : record.segments.includes("All") || record.segments.includes(filters.segment);
+
   return (
     (!filters.stage || record.stages.includes(filters.stage)) &&
     (!filters.situation || record.situations.includes(filters.situation)) &&
     (!filters.competitor || record.competitors.includes(filters.competitor)) &&
-    (!filters.segment || record.segments.includes(filters.segment)) &&
+    matchesSegment &&
     (!filters.industry || record.industries.includes(filters.industry))
   );
 }
@@ -613,11 +620,11 @@ async function deleteCollateral(id: string | number) {
 
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
         <GuidedFilter
-          label="What stage is the deal at?"
-          value={filters.stage}
-          options={filterOptions.stages}
-          onChange={(value) => handleFilterChange("stage", value)}
-          placeholder="Select stage"
+          label="What is the situation?"
+          value={filters.situation}
+          options={filterOptions.situations}
+          onChange={(value) => handleFilterChange("situation", value)}
+          placeholder="Select situation"
         />
         <GuidedFilter
           label="Which competitors are in the picture?"
@@ -646,11 +653,11 @@ async function deleteCollateral(id: string | number) {
         {showMoreContext ? (
           <div className="mt-3 grid gap-3 lg:grid-cols-3">
             <GuidedFilter
-              label="What is the situation?"
-              value={filters.situation}
-              options={filterOptions.situations}
-              onChange={(value) => handleFilterChange("situation", value)}
-              placeholder="Select situation"
+              label="What stage is the deal at?"
+              value={filters.stage}
+              options={filterOptions.stages}
+              onChange={(value) => handleFilterChange("stage", value)}
+              placeholder="Select stage"
               optional
             />
             <GuidedFilter
@@ -699,7 +706,7 @@ async function deleteCollateral(id: string | number) {
           <div className="rounded-[20px] border border-dashed border-border bg-surface-soft p-6 text-center">
             <h3 className="title-font text-lg font-semibold text-foreground">Answer the first question to begin</h3>
             <p className="mt-2 text-sm leading-7 text-muted">
-              Start with the deal stage, then add competitors and any extra context if you need a narrower recommendation.
+              Start with the situation, then add competitors and any extra context if you need a narrower recommendation.
             </p>
           </div>
         ) : matchingCollateral.length ? (
@@ -758,7 +765,7 @@ async function deleteCollateral(id: string | number) {
           <div className="rounded-[20px] border border-dashed border-border bg-surface-soft p-6 text-center">
             <h3 className="title-font text-lg font-semibold text-foreground">No matching collateral</h3>
             <p className="mt-2 text-sm leading-7 text-muted">
-              Try a different stage, competitor, or add more context to broaden the recommendation.
+              Try removing additional filters to broaden the recommendation
             </p>
           </div>
         )}

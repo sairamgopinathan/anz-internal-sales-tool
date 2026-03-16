@@ -107,13 +107,14 @@ export const filterOptions = {
     "Freshsales",
     "None",
   ],
-  segments: ["SMB", "Mid-market", "Enterprise"],
+  segments: ["All", "SMB", "Mid-market", "Enterprise"],
   situations: [
     "First intro call",
     "Product overview needed",
     "Demo follow-up",
     "Competitor comparison",
     "Pricing objection",
+    "CX asks about AI",
     "Migration concern",
     "Security concern",
     "Need proof / case study",
@@ -131,6 +132,7 @@ export const filterOptions = {
     "Financial Services",
   ],
   tags: [
+    "AI Confidence Builder",
     "Price Objection Slayer",
     "Competitive Knockout",
     "CFO Approved",

@@ -22,11 +22,27 @@ type MultiSelectFieldProps = {
   onChange: (nextValue: string[]) => void;
   className?: string;
   gridClassName?: string;
+  allOption?: string;
 };
 
-function MultiSelectField({ label, value, options, error, onChange, className, gridClassName }: MultiSelectFieldProps) {
+function MultiSelectField({ label, value, options, error, onChange, className, gridClassName, allOption }: MultiSelectFieldProps) {
   function handleChange(option: string, checked: boolean) {
-    const nextValue = checked ? [...value, option] : value.filter((item) => item !== option);
+    const baseOptions = allOption ? options.filter((item) => item !== allOption) : options;
+    let nextValue: string[];
+
+    if (allOption && option === allOption) {
+      nextValue = checked ? [allOption, ...baseOptions] : [];
+      onChange(nextValue);
+      return;
+    }
+
+    if (checked) {
+      const selectedValues = Array.from(new Set([...value.filter((item) => item !== allOption), option]));
+      nextValue = allOption && baseOptions.every((item) => selectedValues.includes(item)) ? [allOption, ...baseOptions] : selectedValues;
+    } else {
+      nextValue = value.filter((item) => item !== option && item !== allOption);
+    }
+
     onChange(nextValue);
   }
 
@@ -173,6 +189,7 @@ export function CollateralForm({ mode, values, errors, onChange, onSubmit, onCan
           options={filterOptions.segments}
           onChange={(nextValue) => updateField("segments", nextValue)}
           gridClassName="grid gap-1.5 sm:grid-cols-1 xl:grid-cols-1"
+          allOption="All"
         />
         <MultiSelectField
           className="xl:col-span-5"
