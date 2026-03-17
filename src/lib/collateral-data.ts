@@ -1,5 +1,5 @@
 export type Theme = "dark" | "light";
-export type View = "sales" | "admin";
+export type View = "sales" | "library" | "admin";
 
 export type CollateralRecord = {
   id: string | number;
@@ -76,6 +76,28 @@ const assetTypeAliases: Record<string, string> = {
   Ebooks: "Ebook",
 };
 
+const libraryAssetTypeLabels: Record<string, string> = {
+  Deck: "Decks",
+  "One-pager": "One-pagers",
+  Ebook: "Ebooks",
+  "Sales guide": "Sales guides",
+  Battlecard: "Battlecards",
+  "Case study": "Case Studies",
+  "Detailed comparison sheet": "Detailed comparison sheets",
+  "Brief comparison sheet": "Brief comparison sheets",
+  PDF: "PDFs",
+  "Web link": "Web links",
+  Video: "Videos",
+  Webinar: "Webinars",
+  Podcast: "Podcasts",
+  Screenshots: "Screenshots",
+  Brochures: "Brochures",
+  "Short brochures": "Short brochures",
+  Comics: "Comics",
+  "Pricing doc": "Pricing docs",
+  "ROI calculator": "ROI calculators",
+};
+
 const competitorAliases: Record<string, string> = {
   InforCRM: "Infor CRM",
 };
@@ -150,8 +172,22 @@ export function getCompetitorFaviconUrl(name: string) {
   return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64`;
 }
 
-function normalizeAssetType(value: string) {
+export function normalizeAssetType(value: string) {
   return assetTypeAliases[value] ?? value;
+}
+
+export function getLibraryAssetTypeLabel(value: string) {
+  const normalizedValue = normalizeAssetType(value);
+
+  return libraryAssetTypeLabels[normalizedValue] ?? `${normalizedValue}s`;
+}
+
+export function getLibraryAssetTypeOptions() {
+  return [...filterOptions.assetTypes]
+    .map((value) => normalizeAssetType(value))
+    .filter((value, index, values) => values.indexOf(value) === index)
+    .sort((left, right) => getLibraryAssetTypeLabel(left).localeCompare(getLibraryAssetTypeLabel(right), undefined, { sensitivity: "base" }))
+    .map((value) => ({ value, label: getLibraryAssetTypeLabel(value) }));
 }
 
 function normalizeCompetitor(value: string) {

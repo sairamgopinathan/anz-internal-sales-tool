@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 
 import { CollateralForm } from "@/components/collateral-form";
+import { LIBRARY_ALL_ASSETS, LibraryBrowser, type LibrarySortOption } from "@/components/library-browser";
 import {
   emptyCollateralForm,
   filterOptions,
@@ -71,6 +72,14 @@ function SearchIcon() {
     <svg aria-hidden="true" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
       <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-4.35-4.35" />
       <circle cx="11" cy="11" r="6.5" />
+    </svg>
+  );
+}
+
+function FolderIcon() {
+  return (
+    <svg aria-hidden="true" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 7.5A2.25 2.25 0 0 1 6 5.25h4.19a2.25 2.25 0 0 1 1.59.66l1.31 1.34c.42.42.99.66 1.58.66H18A2.25 2.25 0 0 1 20.25 10.5v6.75A2.25 2.25 0 0 1 18 19.5H6a2.25 2.25 0 0 1-2.25-2.25V7.5Z" />
     </svg>
   );
 }
@@ -398,6 +407,9 @@ export function DashboardShell() {
   const [error, setError] = useState("");
   const [filters, setFilters] = useState<FilterState>(initialFilters);
   const [showMoreContext, setShowMoreContext] = useState(false);
+  const [libraryAssetType, setLibraryAssetType] = useState(LIBRARY_ALL_ASSETS);
+  const [librarySearchTerm, setLibrarySearchTerm] = useState("");
+  const [librarySortBy, setLibrarySortBy] = useState<LibrarySortOption>("recent");
   const [adminSearchTerm, setAdminSearchTerm] = useState("");
   const [adminPage, setAdminPage] = useState(1);
   const [collateral, setCollateral] = useState<CollateralRecord[]>([]);
@@ -520,6 +532,14 @@ export function DashboardShell() {
         eyebrow: "Admin View",
         title: "Manage collateral records for the recommendation tool.",
         subtitle: "Add and edit collateral entries with reusable structured fields and tag-based matching.",
+      };
+    }
+
+    if (view === "library") {
+      return {
+        eyebrow: "Library",
+        title: "Browse the collateral library.",
+        subtitle: "Jump straight into the format you need and open the right asset in seconds.",
       };
     }
 
@@ -734,7 +754,29 @@ async function deleteCollateral(id: string | number) {
               {theme === "dark" ? "Dark mode" : "Light mode"}
             </button>
 
-            {view === "sales" ? (
+            <div className="inline-flex items-center gap-1 rounded-full border border-border bg-surface-soft p-1">
+              <button
+                type="button"
+                onClick={() => setView("sales")}
+                className={`rounded-full px-3 py-1.5 text-sm font-medium transition ${
+                  view === "sales" ? "bg-accent text-slate-950" : "text-foreground hover:text-accent"
+                }`}
+              >
+                Companion
+              </button>
+              <button
+                type="button"
+                onClick={() => setView("library")}
+                className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium transition ${
+                  view === "library" ? "bg-accent text-slate-950" : "text-foreground hover:text-accent"
+                }`}
+              >
+                <FolderIcon />
+                Library
+              </button>
+            </div>
+
+            {view !== "admin" ? (
               <button
                 type="button"
                 onClick={openPrompt}
@@ -756,7 +798,7 @@ async function deleteCollateral(id: string | number) {
           </div>
         </header>
 
-{view === "sales" ? (
+        {view === "sales" ? (
   <section className="space-y-4">
     <section className="rounded-[24px] border border-border bg-surface-strong p-4 sm:p-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -928,6 +970,20 @@ async function deleteCollateral(id: string | number) {
       </div>
     </section>
   </section>
+        ) : view === "library" ? (
+          <LibraryBrowser
+            collateral={collateral}
+            isLoading={isLoading}
+            dataError={dataError}
+            selectedAssetType={libraryAssetType}
+            onSelectAssetType={setLibraryAssetType}
+            searchTerm={librarySearchTerm}
+            onSearchTermChange={setLibrarySearchTerm}
+            sortBy={librarySortBy}
+            onSortByChange={setLibrarySortBy}
+            copiedId={copiedId}
+            onCopyLink={handleCopyLink}
+          />
         ) : (
           <section className="space-y-4 py-3">
             <CollateralForm
