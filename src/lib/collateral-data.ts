@@ -108,6 +108,8 @@ const tagAliases: Record<string, string> = {
 };
 
 export const competitorDomains: Record<string, string | null> = {
+  None: null,
+  "Pipedrive CRM": "pipedrive.com",
   Salesforce: "salesforce.com",
   HubSpot: "hubspot.com",
   Dynamics: "dynamics.microsoft.com",
@@ -129,7 +131,6 @@ export const competitorDomains: Record<string, string | null> = {
   Pipeliner: "pipelinersales.com",
   Creatio: "creatio.com",
   Freshsales: "freshworks.com",
-  None: null,
 };
 
 export function getCompetitorFaviconUrl(name: string) {
@@ -188,6 +189,12 @@ function sortIndustries(values: string[]) {
   return ["Generic", ...sortLabels(remainingIndustries)];
 }
 
+function sortCompetitors(values: string[]) {
+  const remainingCompetitors = values.filter((value) => value !== "None");
+
+  return ["None", ...sortLabels(remainingCompetitors)];
+}
+
 export const filterOptions = {
   stages: ["Discovery", "Demo", "Evaluation", "Decision"],
   assetTypes: [
@@ -212,11 +219,12 @@ export const filterOptions = {
     "ROI calculator",
   ],
   intents: ["Educate", "Compare", "Objection handling", "De-risk", "Close"],
-  competitors: sortLabels([
+  competitors: sortCompetitors([
     "Salesforce",
     "HubSpot",
     "Dynamics",
     "GoHighLevel",
+    "Pipedrive CRM",
     "Infor CRM",
     "Kustomer",
     "Leadsquared",
