@@ -80,6 +80,13 @@ const competitorAliases: Record<string, string> = {
   InforCRM: "Infor CRM",
 };
 
+const industryAliases: Record<string, string> = {
+  Healthcare: "Life sciences",
+  SaaS: "Retail",
+  Media: "Agencies",
+  Manufacturing: "Insurance",
+};
+
 const tagAliases: Record<string, string> = {
   "AI Confidence Builder": "🤖 AI Confidence Builder",
   "Price Objection Slayer": "💰 Price Objection Slayer",
@@ -153,6 +160,14 @@ function normalizeCompetitor(value: string) {
 
 function normalizeCompetitors(values: string[]) {
   return Array.from(new Set(values.map(normalizeCompetitor)));
+}
+
+function normalizeIndustry(value: string) {
+  return industryAliases[value] ?? value;
+}
+
+function normalizeIndustries(values: string[]) {
+  return Array.from(new Set(values.map(normalizeIndustry)));
 }
 
 function normalizeSituation(value: string) {
@@ -258,16 +273,19 @@ export const filterOptions = {
     "Need proof / case study",
   ]),
   industries: sortIndustries([
+    "Agencies",
     "Generic",
+    "Broadcasting",
+    "Hospitality",
     "Legal",
-    "SaaS",
+    "Retail",
     "Automotive",
-    "Media",
     "Real Estate",
-    "Manufacturing",
-    "Healthcare",
+    "Insurance",
+    "Life sciences",
     "Education",
     "Financial Services",
+    "Startups",
   ]),
   tags: sortLabelsIgnoringEmoji([
     "🤖 AI Confidence Builder",
@@ -328,7 +346,7 @@ export function recordToFormValues(record: CollateralRecord): CollateralFormValu
     situations: normalizeSituations(record.situations),
     competitors: normalizeCompetitors(record.competitors),
     segments: record.segments,
-    industries: record.industries,
+    industries: normalizeIndustries(record.industries),
     tags: normalizeTags(record.tags),
     intent: record.intent,
     summary: record.summary,
@@ -346,7 +364,7 @@ export function mapRowToCollateralRecord(row: CollateralEntryRow): CollateralRec
     situations: normalizeSituations(row.situations ?? []),
     competitors: normalizeCompetitors(row.competitors ?? []),
     segments: row.segments ?? [],
-    industries: row.industries ?? [],
+    industries: normalizeIndustries(row.industries ?? []),
     tags: normalizeTags(row.tags ?? []),
     intent: row.intent,
     summary: row.summary,
@@ -367,7 +385,7 @@ export function mapFormValuesToRow(
     situations: normalizeSituations(values.situations),
     competitors: normalizeCompetitors(values.competitors),
     segments: values.segments,
-    industries: values.industries,
+    industries: normalizeIndustries(values.industries),
     tags: normalizeTags(values.tags),
     intent: values.intent.trim(),
     summary: values.summary.trim(),
