@@ -76,6 +76,10 @@ const assetTypeAliases: Record<string, string> = {
   Ebooks: "Ebook",
 };
 
+const competitorAliases: Record<string, string> = {
+  InforCRM: "Infor CRM",
+};
+
 const tagAliases: Record<string, string> = {
   "AI Confidence Builder": "🤖 AI Confidence Builder",
   "Price Objection Slayer": "💰 Price Objection Slayer",
@@ -109,7 +113,6 @@ export const competitorDomains: Record<string, string | null> = {
   Dynamics: "dynamics.microsoft.com",
   GoHighLevel: "gohighlevel.com",
   "Infor CRM": "infor.com",
-  InforCRM: "infor.com",
   Kustomer: "kustomer.com",
   Leadsquared: "leadsquared.com",
   Nutshell: "nutshell.com",
@@ -143,6 +146,14 @@ function normalizeAssetType(value: string) {
   return assetTypeAliases[value] ?? value;
 }
 
+function normalizeCompetitor(value: string) {
+  return competitorAliases[value] ?? value;
+}
+
+function normalizeCompetitors(values: string[]) {
+  return Array.from(new Set(values.map(normalizeCompetitor)));
+}
+
 function normalizeSituation(value: string) {
   return value === "Demo follow-up" ? "CX asks about a specific feature" : value;
 }
@@ -157,6 +168,24 @@ function normalizeTag(value: string) {
 
 function normalizeTags(values: string[]) {
   return values.map(normalizeTag);
+}
+
+function sortLabels(values: string[]) {
+  return [...values].sort((left, right) => left.localeCompare(right, undefined, { sensitivity: "base" }));
+}
+
+function sortLabelsIgnoringEmoji(values: string[]) {
+  return [...values].sort((left, right) => {
+    const normalizeForSort = (value: string) => value.replace(/^[^\p{L}\p{N}]+/u, "").trim();
+
+    return normalizeForSort(left).localeCompare(normalizeForSort(right), undefined, { sensitivity: "base" });
+  });
+}
+
+function sortIndustries(values: string[]) {
+  const remainingIndustries = values.filter((value) => value !== "Generic");
+
+  return ["Generic", ...sortLabels(remainingIndustries)];
 }
 
 export const filterOptions = {
@@ -183,13 +212,12 @@ export const filterOptions = {
     "ROI calculator",
   ],
   intents: ["Educate", "Compare", "Objection handling", "De-risk", "Close"],
-  competitors: [
+  competitors: sortLabels([
     "Salesforce",
     "HubSpot",
     "Dynamics",
     "GoHighLevel",
     "Infor CRM",
-    "InforCRM",
     "Kustomer",
     "Leadsquared",
     "Nutshell",
@@ -207,9 +235,9 @@ export const filterOptions = {
     "Creatio",
     "Freshsales",
     "None",
-  ],
+  ]),
   segments: ["All", "SMB", "Mid-market", "Enterprise"],
-  situations: [
+  situations: sortLabels([
     "First intro call",
     "Product overview needed",
     "CX asks about a specific feature",
@@ -220,8 +248,8 @@ export const filterOptions = {
     "Migration concern",
     "Security concern",
     "Need proof / case study",
-  ],
-  industries: [
+  ]),
+  industries: sortIndustries([
     "Generic",
     "Legal",
     "SaaS",
@@ -232,8 +260,8 @@ export const filterOptions = {
     "Healthcare",
     "Education",
     "Financial Services",
-  ],
-  tags: [
+  ]),
+  tags: sortLabelsIgnoringEmoji([
     "🤖 AI Confidence Builder",
     "💰 Price Objection Slayer",
     "🥊 Competitive Knockout",
@@ -257,7 +285,7 @@ export const filterOptions = {
     "🤝 Trust Builder",
     "🔒 Internal Use Only",
     "🧠 Created with AI",
-  ],
+  ]),
 };
 
 export const initialFilters: FilterState = {
@@ -290,7 +318,7 @@ export function recordToFormValues(record: CollateralRecord): CollateralFormValu
     assetType: normalizeAssetType(record.assetType),
     stages: record.stages,
     situations: normalizeSituations(record.situations),
-    competitors: record.competitors,
+    competitors: normalizeCompetitors(record.competitors),
     segments: record.segments,
     industries: record.industries,
     tags: normalizeTags(record.tags),
@@ -308,7 +336,7 @@ export function mapRowToCollateralRecord(row: CollateralEntryRow): CollateralRec
     assetType: normalizeAssetType(row.asset_type),
     stages: row.stages ?? [],
     situations: normalizeSituations(row.situations ?? []),
-    competitors: row.competitors ?? [],
+    competitors: normalizeCompetitors(row.competitors ?? []),
     segments: row.segments ?? [],
     industries: row.industries ?? [],
     tags: normalizeTags(row.tags ?? []),
@@ -329,7 +357,7 @@ export function mapFormValuesToRow(
     asset_type: normalizeAssetType(values.assetType),
     stages: values.stages,
     situations: normalizeSituations(values.situations),
-    competitors: values.competitors,
+    competitors: normalizeCompetitors(values.competitors),
     segments: values.segments,
     industries: values.industries,
     tags: normalizeTags(values.tags),
