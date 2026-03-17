@@ -285,6 +285,7 @@ export const filterOptions = {
     "Life sciences",
     "Education",
     "Financial Services",
+    "Services",
     "Startups",
   ]),
   tags: sortLabelsIgnoringEmoji([
