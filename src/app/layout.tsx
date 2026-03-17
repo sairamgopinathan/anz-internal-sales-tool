@@ -3,8 +3,11 @@ import Script from "next/script";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "ANZ Internal Sales",
+  title: "DealPilot – Find what helps you win",
   description: "Internal sales workspace with admin access and mock data.",
+  icons: {
+    icon: "/icon.svg",
+  },
 };
 
 export default function RootLayout({
