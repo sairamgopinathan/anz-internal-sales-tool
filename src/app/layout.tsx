@@ -4,7 +4,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "DealPilot – Find what helps you win",
-  description: "Internal sales workspace with admin access and mock data.",
+  description: "Internal sales workspace with guided collateral recommendations and admin access.",
   icons: {
     icon: "/icon.svg",
   },

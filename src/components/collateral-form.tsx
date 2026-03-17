@@ -110,7 +110,7 @@ export function CollateralForm({ mode, values, errors, onChange, onSubmit, onCan
             {mode === "add" ? "Add New Collateral" : "Edit Collateral"}
           </h2>
           <p className="mt-1 text-sm text-muted">
-            Manage mock collateral records with a single shared form.
+            Manage collateral records with a single shared form.
           </p>
         </div>
         {mode === "edit" ? (

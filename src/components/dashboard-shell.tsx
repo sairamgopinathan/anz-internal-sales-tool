@@ -519,7 +519,7 @@ export function DashboardShell() {
       return {
         eyebrow: "Admin View",
         title: "Manage collateral records for the recommendation tool.",
-        subtitle: "Add and edit mock collateral entries with reusable structured fields and tag-based matching.",
+        subtitle: "Add and edit collateral entries with reusable structured fields and tag-based matching.",
       };
     }
 
@@ -562,7 +562,7 @@ export function DashboardShell() {
       return;
     }
 
-    setError("Incorrect password. Try admin123 for the prototype admin view.");
+    setError("Incorrect password. Please try again.");
   }
 
   function handleFilterChange(field: keyof FilterState, value: string) {
@@ -1079,7 +1079,7 @@ async function deleteCollateral(id: string | number) {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.24em] text-accent">Admin access</p>
-                <h2 className="title-font mt-2 text-2xl font-semibold text-foreground">Enter prototype password</h2>
+                <h2 className="title-font mt-2 text-2xl font-semibold text-foreground">Enter admin password</h2>
               </div>
               <button
                 type="button"
@@ -1094,7 +1094,7 @@ async function deleteCollateral(id: string | number) {
             </div>
 
             <p className="mt-3 text-sm leading-6 text-muted">
-              This prompt gates the mock admin view only. No external auth is connected in this first pass.
+              Enter your admin password to manage collateral records and settings.
             </p>
 
             <form onSubmit={handlePasswordSubmit} className="mt-6 space-y-4">
