@@ -357,6 +357,10 @@ function validateForm(
   return errors;
 }
 
+function isDuplicateLinkError(message: string) {
+  return message.toLowerCase().includes("this link already exists");
+}
+
 function TagGroup({ label, tags }: { label: string; tags: string[] }) {
   if (!tags.length) {
     return null;
@@ -441,11 +445,18 @@ export function DashboardShell() {
     return records;
   }
 
-  async function syncCollateralSilently() {
-    try {
-      await reloadCollateral();
-    } catch {
-      // Keep the optimistic UI state if background sync fails.
+  async function syncCollateralWithRetry(retries = 3) {
+    for (let attempt = 0; attempt < retries; attempt += 1) {
+      try {
+        await reloadCollateral();
+        return;
+      } catch {
+        if (attempt === retries - 1) {
+          return;
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 500 * (attempt + 1)));
+      }
     }
   }
 
@@ -625,6 +636,7 @@ async function submitForm() {
 
   if (Object.keys(errors).length > 0) {
     setFormErrors(errors);
+    setActionError("");
     return;
   }
 
@@ -643,14 +655,22 @@ async function submitForm() {
       );
     } catch (updateException) {
       const message = updateException instanceof Error ? updateException.message : String(updateException);
-      setActionError(message);
+
+      if (isDuplicateLinkError(message)) {
+        setFormErrors((current) => ({ ...current, link: message }));
+        setActionError("");
+      } else {
+        setActionError(message);
+      }
+
+      void syncCollateralWithRetry();
       setIsSaving(false);
       return;
     }
 
     setIsSaving(false);
     stopEditing();
-    void syncCollateralSilently();
+    void syncCollateralWithRetry();
     return;
   }
 
@@ -660,17 +680,27 @@ async function submitForm() {
     setCollateral((current) => [createdRecord, ...current]);
   } catch (insertException) {
     const message = insertException instanceof Error ? insertException.message : String(insertException);
-    setActionError(message);
+
+    if (isDuplicateLinkError(message)) {
+      setFormErrors((current) => ({ ...current, link: message }));
+      setActionError("");
+    } else {
+      setActionError(message);
+    }
+
+    void syncCollateralWithRetry();
     setIsSaving(false);
     return;
   }
 
   setFormValues(emptyCollateralForm);
   setIsSaving(false);
-  void syncCollateralSilently();
+  void syncCollateralWithRetry();
 }
 
 async function deleteCollateral(id: string | number) {
+  setActionError("");
+
   try {
     await deleteCollateralInCatalyst(id);
 
@@ -680,10 +710,11 @@ async function deleteCollateral(id: string | number) {
       stopEditing();
     }
 
-    void syncCollateralSilently();
+    void syncCollateralWithRetry();
   } catch (deleteException) {
     const message = deleteException instanceof Error ? deleteException.message : String(deleteException);
     setActionError(message);
+    void syncCollateralWithRetry();
   }
 }
 
