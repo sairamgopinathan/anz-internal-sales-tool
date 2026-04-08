@@ -1,0 +1,11 @@
+{
+  "deployment": {
+    "name": "update-collateral",
+    "stack": "node20",
+    "type": "basicio",
+    "env_variables": {}
+  },
+  "execution": {
+    "main": "index.js"
+  }
+}

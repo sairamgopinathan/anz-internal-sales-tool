@@ -391,23 +391,34 @@ export function recordToFormValues(record: CollateralRecord): CollateralFormValu
   };
 }
 
-export function mapRowToCollateralRecord(row: CollateralEntryRow): CollateralRecord {
+export function normalizeCollateralRecord(record: CollateralRecord): CollateralRecord {
   return {
+    ...record,
+    assetType: normalizeAssetType(record.assetType),
+    situations: normalizeSituations(record.situations),
+    competitors: normalizeCompetitors(record.competitors),
+    industries: normalizeIndustries(record.industries),
+    tags: normalizeTags(record.tags),
+  };
+}
+
+export function mapRowToCollateralRecord(row: CollateralEntryRow): CollateralRecord {
+  return normalizeCollateralRecord({
     id: row.id,
     assetName: row.asset_name,
     link: row.link,
-    assetType: normalizeAssetType(row.asset_type),
+    assetType: row.asset_type,
     stages: row.stages ?? [],
-    situations: normalizeSituations(row.situations ?? []),
-    competitors: normalizeCompetitors(row.competitors ?? []),
+    situations: row.situations ?? [],
+    competitors: row.competitors ?? [],
     segments: row.segments ?? [],
-    industries: normalizeIndustries(row.industries ?? []),
-    tags: normalizeTags(row.tags ?? []),
+    industries: row.industries ?? [],
+    tags: row.tags ?? [],
     intent: row.intent,
     summary: row.summary,
     recommendedWhen: row.recommended_when,
     priority: row.priority,
-  };
+  });
 }
 
 export function mapFormValuesToRow(

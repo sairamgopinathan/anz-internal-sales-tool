@@ -1,0 +1,15 @@
+{
+  "functions": {
+    "source": "functions",
+    "targets": [
+      "get-collateral",
+      "create-collateral",
+      "update-collateral",
+      "delete-collateral"
+    ],
+    "ignore": [
+      "node_modules",
+      ".output"
+    ]
+  }
+}

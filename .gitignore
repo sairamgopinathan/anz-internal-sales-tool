@@ -36,6 +36,12 @@ yarn-error.log*
 # vercel
 .vercel
 
+# catalyst local artifacts
+.catalystrc
+Import_*.zip
+functions/**/node_modules/
+functions/**/package-lock.json
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

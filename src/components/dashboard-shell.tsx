@@ -5,14 +5,17 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { CollateralForm } from "@/components/collateral-form";
 import { LIBRARY_ALL_ASSETS, LibraryBrowser, type LibrarySortOption } from "@/components/library-browser";
 import {
+  createCollateralInCatalyst,
+  deleteCollateralInCatalyst,
+  fetchCollateralFromCatalyst,
+  updateCollateralInCatalyst,
+} from "@/lib/catalyst-collateral-api";
+import {
   emptyCollateralForm,
   filterOptions,
   getCompetitorFaviconUrl,
   initialFilters,
-  mapFormValuesToRow,
-  mapRowToCollateralRecord,
   recordToFormValues,
-  type CollateralEntryRow,
   type CollateralFormErrors,
   type CollateralFormValues,
   type CollateralRecord,
@@ -20,12 +23,10 @@ import {
   type Theme,
   type View,
 } from "@/lib/collateral-data";
-import { supabase } from "@/lib/supabase-client";
 
 const THEME_STORAGE_KEY = "anzapp-theme";
 const ADMIN_PASSWORD = "admin123";
 const ADMIN_ACCESS_STORAGE_KEY = "anzapp-admin-access";
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 const ADMIN_PAGE_SIZE = 10;
 
 function applyTheme(theme: Theme) {
@@ -436,29 +437,14 @@ export function DashboardShell() {
 
   useEffect(() => {
     async function fetchCollateral() {
-      console.log("[Supabase] Fetching collateral entries", { url: SUPABASE_URL, table: "collateral_entries" });
       setIsLoading(true);
       setDataError("");
 
       try {
-        const { data, error: fetchError } = await supabase
-          .from("collateral_entries")
-          .select("id, asset_name, link, asset_type, stages, situations, competitors, segments, industries, tags, intent, summary, recommended_when, priority");
-
-        if (fetchError) {
-          console.error("[Supabase] Fetch error:", fetchError);
-          setDataError(fetchError.message);
-          setCollateral([]);
-          setIsLoading(false);
-          return;
-        }
-
-        const rows = (data ?? []) as CollateralEntryRow[];
-        setCollateral(rows.map(mapRowToCollateralRecord));
+        setCollateral(await fetchCollateralFromCatalyst());
       } catch (fetchException) {
-        console.error("[Supabase] Fetch exception:", fetchException);
         const message = fetchException instanceof Error ? fetchException.message : String(fetchException);
-        setDataError(`${message}${SUPABASE_URL ? ` (${SUPABASE_URL})` : ""}`);
+        setDataError(message);
         setCollateral([]);
       }
 
@@ -634,32 +620,16 @@ async function submitForm() {
 
   if (editingId) {
     const existingRecord = collateral.find((record) => String(record.id) === editingId);
-    const updatePayload = mapFormValuesToRow(formValues, existingRecord?.priority ?? 0);
-
-    console.log("[Supabase] Updating collateral entry", { id: existingRecord?.id ?? editingId, payload: updatePayload });
 
     try {
-      const { data, error: updateError } = await supabase
-        .from("collateral_entries")
-        .update(updatePayload)
-        .eq("id", existingRecord?.id ?? editingId)
-        .select("id, asset_name, link, asset_type, stages, situations, competitors, segments, industries, tags, intent, summary, recommended_when, priority")
-        .single();
-
-      if (updateError) {
-        console.error("[Supabase] Update error:", updateError);
-        setActionError(updateError.message);
-        setIsSaving(false);
-        return;
-      }
+      const updatedRecord = await updateCollateralInCatalyst(editingId, formValues, existingRecord?.priority ?? 0);
 
       setCollateral((current) =>
-        current.map((record) => (String(record.id) === editingId ? mapRowToCollateralRecord(data as CollateralEntryRow) : record)),
+        current.map((record) => (String(record.id) === editingId ? updatedRecord : record)),
       );
     } catch (updateException) {
-      console.error("[Supabase] Update exception:", updateException);
       const message = updateException instanceof Error ? updateException.message : String(updateException);
-      setActionError(`${message}${SUPABASE_URL ? ` (${SUPABASE_URL})` : ""}`);
+      setActionError(message);
       setIsSaving(false);
       return;
     }
@@ -669,29 +639,13 @@ async function submitForm() {
     return;
   }
 
-  const insertPayload = mapFormValuesToRow(formValues, 0);
-
-  console.log("[Supabase] Inserting collateral entry", insertPayload);
-
   try {
-    const { data, error: insertError } = await supabase
-      .from("collateral_entries")
-      .insert(insertPayload)
-      .select("id, asset_name, link, asset_type, stages, situations, competitors, segments, industries, tags, intent, summary, recommended_when, priority")
-      .single();
+    const createdRecord = await createCollateralInCatalyst(formValues);
 
-    if (insertError) {
-      console.error("[Supabase] Insert error:", insertError);
-      setActionError(insertError.message);
-      setIsSaving(false);
-      return;
-    }
-
-    setCollateral((current) => [mapRowToCollateralRecord(data as CollateralEntryRow), ...current]);
+    setCollateral((current) => [createdRecord, ...current]);
   } catch (insertException) {
-    console.error("[Supabase] Insert exception:", insertException);
     const message = insertException instanceof Error ? insertException.message : String(insertException);
-    setActionError(`${message}${SUPABASE_URL ? ` (${SUPABASE_URL})` : ""}`);
+    setActionError(message);
     setIsSaving(false);
     return;
   }
@@ -702,17 +656,7 @@ async function submitForm() {
 
 async function deleteCollateral(id: string | number) {
   try {
-    console.log("[Supabase] Deleting collateral entry", { id });
-    const { error: deleteError } = await supabase
-      .from("collateral_entries")
-      .delete()
-      .eq("id", id);
-
-    if (deleteError) {
-      console.error("[Supabase] Delete error:", deleteError);
-      setActionError(deleteError.message);
-      return;
-    }
+    await deleteCollateralInCatalyst(id);
 
     setCollateral((current) => current.filter((record) => String(record.id) !== String(id)));
 
@@ -720,9 +664,8 @@ async function deleteCollateral(id: string | number) {
       stopEditing();
     }
   } catch (deleteException) {
-    console.error("[Supabase] Delete exception:", deleteException);
     const message = deleteException instanceof Error ? deleteException.message : String(deleteException);
-    setActionError(`${message}${SUPABASE_URL ? ` (${SUPABASE_URL})` : ""}`);
+    setActionError(message);
   }
 }
 
