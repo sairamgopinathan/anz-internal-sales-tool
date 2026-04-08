@@ -441,6 +441,14 @@ export function DashboardShell() {
     return records;
   }
 
+  async function syncCollateralSilently() {
+    try {
+      await reloadCollateral();
+    } catch {
+      // Keep the optimistic UI state if background sync fails.
+    }
+  }
+
   useEffect(() => {
     async function fetchCollateral() {
       setIsLoading(true);
@@ -628,8 +636,11 @@ async function submitForm() {
     const existingRecord = collateral.find((record) => String(record.id) === editingId);
 
     try {
-      await updateCollateralInCatalyst(editingId, formValues, existingRecord?.priority ?? 0);
-      await reloadCollateral();
+      const updatedRecord = await updateCollateralInCatalyst(editingId, formValues, existingRecord?.priority ?? 0);
+
+      setCollateral((current) =>
+        current.map((record) => (String(record.id) === editingId ? updatedRecord : record)),
+      );
     } catch (updateException) {
       const message = updateException instanceof Error ? updateException.message : String(updateException);
       setActionError(message);
@@ -639,12 +650,14 @@ async function submitForm() {
 
     setIsSaving(false);
     stopEditing();
+    void syncCollateralSilently();
     return;
   }
 
   try {
-    await createCollateralInCatalyst(formValues);
-    await reloadCollateral();
+    const createdRecord = await createCollateralInCatalyst(formValues);
+
+    setCollateral((current) => [createdRecord, ...current]);
   } catch (insertException) {
     const message = insertException instanceof Error ? insertException.message : String(insertException);
     setActionError(message);
@@ -654,16 +667,20 @@ async function submitForm() {
 
   setFormValues(emptyCollateralForm);
   setIsSaving(false);
+  void syncCollateralSilently();
 }
 
 async function deleteCollateral(id: string | number) {
   try {
     await deleteCollateralInCatalyst(id);
-    await reloadCollateral();
+
+    setCollateral((current) => current.filter((record) => String(record.id) !== String(id)));
 
     if (editingId && String(editingId) === String(id)) {
       stopEditing();
     }
+
+    void syncCollateralSilently();
   } catch (deleteException) {
     const message = deleteException instanceof Error ? deleteException.message : String(deleteException);
     setActionError(message);
