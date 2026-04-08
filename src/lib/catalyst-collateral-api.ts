@@ -44,6 +44,12 @@ function ensureCollateralRecord(payload: unknown): CollateralRecord {
   throw new Error("Unexpected collateral response from Catalyst");
 }
 
+function sortCollateralNewestFirst(records: CollateralRecord[]) {
+  return [...records].sort((left, right) =>
+    String(right.id).localeCompare(String(left.id), undefined, { numeric: true, sensitivity: "base" }),
+  );
+}
+
 export async function fetchCollateralFromCatalyst() {
   const response = await fetch(COLLATERAL_API_URL, {
     method: "GET",
@@ -55,7 +61,9 @@ export async function fetchCollateralFromCatalyst() {
 
   const payload = await parseCatalystResponse(response);
 
-  return Array.isArray(payload) ? (payload as CollateralRecord[]).map(normalizeCollateralRecord) : [];
+  return Array.isArray(payload)
+    ? sortCollateralNewestFirst((payload as CollateralRecord[]).map(normalizeCollateralRecord))
+    : [];
 }
 
 export async function createCollateralInCatalyst(values: CollateralFormValues) {
@@ -80,7 +88,7 @@ export async function updateCollateralInCatalyst(id: string, values: CollateralF
   };
 
   const response = await fetch(`${COLLATERAL_API_URL}/${encodeURIComponent(id)}`, {
-    method: "PUT",
+    method: "POST",
     headers: {
       "Content-Type": "application/json",
       Accept: "application/json",
@@ -93,10 +101,12 @@ export async function updateCollateralInCatalyst(id: string, values: CollateralF
 
 export async function deleteCollateralInCatalyst(id: string | number) {
   const response = await fetch(`${COLLATERAL_API_URL}/${encodeURIComponent(String(id))}`, {
-    method: "DELETE",
+    method: "POST",
     headers: {
+      "Content-Type": "application/json",
       Accept: "application/json",
     },
+    body: JSON.stringify({ action: "delete" }),
   });
 
   await parseCatalystResponse(response);
