@@ -435,13 +435,19 @@ export function DashboardShell() {
     window.localStorage.setItem(THEME_STORAGE_KEY, theme);
   }, [theme]);
 
+  async function reloadCollateral() {
+    const records = await fetchCollateralFromCatalyst();
+    setCollateral(records);
+    return records;
+  }
+
   useEffect(() => {
     async function fetchCollateral() {
       setIsLoading(true);
       setDataError("");
 
       try {
-        setCollateral(await fetchCollateralFromCatalyst());
+        await reloadCollateral();
       } catch (fetchException) {
         const message = fetchException instanceof Error ? fetchException.message : String(fetchException);
         setDataError(message);
@@ -622,11 +628,8 @@ async function submitForm() {
     const existingRecord = collateral.find((record) => String(record.id) === editingId);
 
     try {
-      const updatedRecord = await updateCollateralInCatalyst(editingId, formValues, existingRecord?.priority ?? 0);
-
-      setCollateral((current) =>
-        current.map((record) => (String(record.id) === editingId ? updatedRecord : record)),
-      );
+      await updateCollateralInCatalyst(editingId, formValues, existingRecord?.priority ?? 0);
+      await reloadCollateral();
     } catch (updateException) {
       const message = updateException instanceof Error ? updateException.message : String(updateException);
       setActionError(message);
@@ -640,9 +643,8 @@ async function submitForm() {
   }
 
   try {
-    const createdRecord = await createCollateralInCatalyst(formValues);
-
-    setCollateral((current) => [createdRecord, ...current]);
+    await createCollateralInCatalyst(formValues);
+    await reloadCollateral();
   } catch (insertException) {
     const message = insertException instanceof Error ? insertException.message : String(insertException);
     setActionError(message);
@@ -657,8 +659,7 @@ async function submitForm() {
 async function deleteCollateral(id: string | number) {
   try {
     await deleteCollateralInCatalyst(id);
-
-    setCollateral((current) => current.filter((record) => String(record.id) !== String(id)));
+    await reloadCollateral();
 
     if (editingId && String(editingId) === String(id)) {
       stopEditing();
