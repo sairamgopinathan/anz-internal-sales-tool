@@ -1,16 +1,7 @@
 import type { CollateralFormValues, CollateralRecord } from "@/lib/collateral-data";
 import { mapFormValuesToRow, normalizeCollateralRecord } from "@/lib/collateral-data";
 
-const CATALYST_BASE_URL = "https://dealpilot-60064672362.development.catalystserverless.in/server";
-
-const GET_COLLATERAL_URL =
-  process.env.NEXT_PUBLIC_CATALYST_GET_COLLATERAL_URL ?? `${CATALYST_BASE_URL}/get-collateral/execute`;
-const CREATE_COLLATERAL_URL =
-  process.env.NEXT_PUBLIC_CATALYST_CREATE_COLLATERAL_URL ?? `${CATALYST_BASE_URL}/create-collateral/execute`;
-const UPDATE_COLLATERAL_URL =
-  process.env.NEXT_PUBLIC_CATALYST_UPDATE_COLLATERAL_URL ?? `${CATALYST_BASE_URL}/update-collateral/execute`;
-const DELETE_COLLATERAL_URL =
-  process.env.NEXT_PUBLIC_CATALYST_DELETE_COLLATERAL_URL ?? `${CATALYST_BASE_URL}/delete-collateral/execute`;
+const COLLATERAL_API_URL = "/api/collateral";
 
 async function parseCatalystResponse(response: Response) {
   const rawText = await response.text();
@@ -54,7 +45,7 @@ function ensureCollateralRecord(payload: unknown): CollateralRecord {
 }
 
 export async function fetchCollateralFromCatalyst() {
-  const response = await fetch(GET_COLLATERAL_URL, {
+  const response = await fetch(COLLATERAL_API_URL, {
     method: "GET",
     headers: {
       Accept: "application/json",
@@ -70,7 +61,7 @@ export async function fetchCollateralFromCatalyst() {
 export async function createCollateralInCatalyst(values: CollateralFormValues) {
   const payload = mapFormValuesToRow(values, 0);
 
-  const response = await fetch(CREATE_COLLATERAL_URL, {
+  const response = await fetch(COLLATERAL_API_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -88,8 +79,8 @@ export async function updateCollateralInCatalyst(id: string, values: CollateralF
     ...mapFormValuesToRow(values, existingPriority ?? 0),
   };
 
-  const response = await fetch(UPDATE_COLLATERAL_URL, {
-    method: "POST",
+  const response = await fetch(`${COLLATERAL_API_URL}/${encodeURIComponent(id)}`, {
+    method: "PUT",
     headers: {
       "Content-Type": "application/json",
       Accept: "application/json",
@@ -101,13 +92,11 @@ export async function updateCollateralInCatalyst(id: string, values: CollateralF
 }
 
 export async function deleteCollateralInCatalyst(id: string | number) {
-  const response = await fetch(DELETE_COLLATERAL_URL, {
-    method: "POST",
+  const response = await fetch(`${COLLATERAL_API_URL}/${encodeURIComponent(String(id))}`, {
+    method: "DELETE",
     headers: {
-      "Content-Type": "application/json",
       Accept: "application/json",
     },
-    body: JSON.stringify({ id: String(id) }),
   });
 
   await parseCatalystResponse(response);
