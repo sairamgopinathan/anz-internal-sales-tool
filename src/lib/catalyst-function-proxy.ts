@@ -37,47 +37,70 @@ export async function callCatalystFunction(
   method: SupportedMethod,
   body?: unknown,
 ) {
-  const response = await fetch(getFunctionUrl(action), {
-    method,
-    headers: {
-      Accept: "application/json",
-      ...(body ? { "Content-Type": "application/json" } : {}),
-    },
-    body: body ? JSON.stringify(body) : undefined,
-    cache: "no-store",
-  });
+  let lastError: Error | null = null;
 
-  const rawText = await response.text();
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      const response = await fetch(getFunctionUrl(action), {
+        method,
+        headers: {
+          Accept: "application/json",
+          ...(body ? { "Content-Type": "application/json" } : {}),
+        },
+        body: body ? JSON.stringify(body) : undefined,
+        cache: "no-store",
+      });
 
-  let payload: unknown;
+      const rawText = await response.text();
 
-  try {
-    payload = JSON.parse(rawText);
-  } catch {
-    throw new Error("Invalid response from Catalyst");
+      let payload: unknown;
+
+      try {
+        payload = JSON.parse(rawText);
+      } catch {
+        throw new Error("Invalid response from Catalyst");
+      }
+
+      const normalizedPayload =
+        typeof payload === "object" &&
+        payload !== null &&
+        "output" in payload &&
+        typeof (payload as { output?: unknown }).output === "string"
+          ? JSON.parse((payload as { output: string }).output)
+          : payload;
+
+      if (!response.ok) {
+        const errorMessage =
+          typeof normalizedPayload === "object" &&
+          normalizedPayload !== null &&
+          "error" in normalizedPayload &&
+          typeof (normalizedPayload as { error?: unknown }).error === "string"
+            ? (normalizedPayload as { error: string }).error
+            : `Request failed with status ${response.status}`;
+
+        const error = new Error(errorMessage) as Error & { status?: number };
+        error.status = response.status;
+
+        if (response.status >= 500 && response.status < 600 && attempt < 2) {
+          lastError = error;
+          await new Promise((resolve) => setTimeout(resolve, 350 * (attempt + 1)));
+          continue;
+        }
+
+        throw error;
+      }
+
+      return normalizedPayload;
+    } catch (error) {
+      const normalizedError = error instanceof Error ? error : new Error(String(error));
+      lastError = normalizedError;
+
+      if (attempt < 2) {
+        await new Promise((resolve) => setTimeout(resolve, 350 * (attempt + 1)));
+        continue;
+      }
+    }
   }
 
-  const normalizedPayload =
-    typeof payload === "object" &&
-    payload !== null &&
-    "output" in payload &&
-    typeof (payload as { output?: unknown }).output === "string"
-      ? JSON.parse((payload as { output: string }).output)
-      : payload;
-
-  if (!response.ok) {
-    const errorMessage =
-      typeof normalizedPayload === "object" &&
-      normalizedPayload !== null &&
-      "error" in normalizedPayload &&
-      typeof (normalizedPayload as { error?: unknown }).error === "string"
-        ? (normalizedPayload as { error: string }).error
-        : `Request failed with status ${response.status}`;
-
-    const error = new Error(errorMessage);
-    (error as Error & { status?: number }).status = response.status;
-    throw error;
-  }
-
-  return normalizedPayload;
+  throw lastError ?? new Error("Failed to reach Catalyst");
 }

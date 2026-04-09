@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 
 import { CollateralForm } from "@/components/collateral-form";
 import { LIBRARY_ALL_ASSETS, LibraryBrowser, type LibrarySortOption } from "@/components/library-browser";
@@ -439,26 +439,27 @@ export function DashboardShell() {
     window.localStorage.setItem(THEME_STORAGE_KEY, theme);
   }, [theme]);
 
-  async function reloadCollateral() {
+  const reloadCollateral = useCallback(async () => {
     const records = await fetchCollateralFromCatalyst();
     setCollateral(records);
     return records;
-  }
+  }, []);
 
-  async function syncCollateralWithRetry(retries = 3) {
+  const syncCollateralWithRetry = useCallback(async (retries = 3) => {
     for (let attempt = 0; attempt < retries; attempt += 1) {
       try {
-        await reloadCollateral();
-        return;
+        return await reloadCollateral();
       } catch {
         if (attempt === retries - 1) {
-          return;
+          return null;
         }
 
         await new Promise((resolve) => setTimeout(resolve, 500 * (attempt + 1)));
       }
     }
-  }
+
+    return null;
+  }, [reloadCollateral]);
 
   useEffect(() => {
     async function fetchCollateral() {
@@ -477,7 +478,27 @@ export function DashboardShell() {
     }
 
     void fetchCollateral();
-  }, []);
+  }, [reloadCollateral]);
+
+  useEffect(() => {
+    function handleWindowFocus() {
+      void syncCollateralWithRetry();
+    }
+
+    function handleVisibilityChange() {
+      if (document.visibilityState === "visible") {
+        void syncCollateralWithRetry();
+      }
+    }
+
+    window.addEventListener("focus", handleWindowFocus);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("focus", handleWindowFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [syncCollateralWithRetry]);
 
   const matchingCollateral = useMemo(() => {
     return collateral.filter((record) => {
@@ -493,7 +514,20 @@ export function DashboardShell() {
     }
 
     return collateral.filter((record) => {
-      return [record.assetName, record.assetType, record.intent, record.summary, record.link, ...record.tags]
+      return [
+        record.assetName,
+        record.assetType,
+        record.intent,
+        record.summary,
+        record.recommendedWhen,
+        record.link,
+        ...record.tags,
+        ...record.stages,
+        ...record.situations,
+        ...record.competitors,
+        ...record.segments,
+        ...record.industries,
+      ]
         .join(" ")
         .toLowerCase()
         .includes(normalizedSearch);
@@ -655,6 +689,18 @@ async function submitForm() {
       );
     } catch (updateException) {
       const message = updateException instanceof Error ? updateException.message : String(updateException);
+      const syncedRecords = await syncCollateralWithRetry();
+      const syncedRecord = syncedRecords?.find((record) => String(record.id) === editingId);
+
+      if (
+        syncedRecord &&
+        normalizeLinkForComparison(syncedRecord.link) === normalizeLinkForComparison(formValues.link) &&
+        syncedRecord.assetName.trim() === formValues.assetName.trim()
+      ) {
+        setIsSaving(false);
+        stopEditing();
+        return;
+      }
 
       if (isDuplicateLinkError(message)) {
         setFormErrors((current) => ({ ...current, link: message }));
@@ -663,7 +709,6 @@ async function submitForm() {
         setActionError(message);
       }
 
-      void syncCollateralWithRetry();
       setIsSaving(false);
       return;
     }
@@ -680,6 +725,19 @@ async function submitForm() {
     setCollateral((current) => [createdRecord, ...current]);
   } catch (insertException) {
     const message = insertException instanceof Error ? insertException.message : String(insertException);
+    const syncedRecords = await syncCollateralWithRetry();
+    const normalizedLink = normalizeLinkForComparison(formValues.link);
+    const createdRecord = syncedRecords?.find(
+      (record) => normalizeLinkForComparison(record.link) === normalizedLink,
+    );
+
+    if (createdRecord) {
+      setFormValues(emptyCollateralForm);
+      setFormErrors({});
+      setActionError("");
+      setIsSaving(false);
+      return;
+    }
 
     if (isDuplicateLinkError(message)) {
       setFormErrors((current) => ({ ...current, link: message }));
@@ -688,7 +746,6 @@ async function submitForm() {
       setActionError(message);
     }
 
-    void syncCollateralWithRetry();
     setIsSaving(false);
     return;
   }
@@ -713,8 +770,18 @@ async function deleteCollateral(id: string | number) {
     void syncCollateralWithRetry();
   } catch (deleteException) {
     const message = deleteException instanceof Error ? deleteException.message : String(deleteException);
+    const syncedRecords = await syncCollateralWithRetry();
+
+    if (syncedRecords && !syncedRecords.some((record) => String(record.id) === String(id))) {
+      if (editingId && String(editingId) === String(id)) {
+        stopEditing();
+      }
+
+      setActionError("");
+      return;
+    }
+
     setActionError(message);
-    void syncCollateralWithRetry();
   }
 }
 
@@ -984,6 +1051,7 @@ async function deleteCollateral(id: string | number) {
               errors={formErrors}
               onChange={(nextValues) => {
                 setFormValues(nextValues);
+                setActionError("");
                 if (Object.keys(formErrors).length > 0) {
                   setFormErrors(validateForm(nextValues, collateral, editingId));
                 }
